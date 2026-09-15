@@ -1,0 +1,11 @@
+{ "exercises": [
+  { "name": "Back Squat", "type": "strength", "muscleGroup": "Legs", "equipment": "Barbell" },
+  { "name": "Deadlift", "type": "strength", "muscleGroup": "Posterior chain", "equipment": "Barbell" },
+  { "name": "Bench Press", "type": "strength", "muscleGroup": "Chest", "equipment": "Barbell" },
+  { "name": "Overhead Press", "type": "strength", "muscleGroup": "Shoulders", "equipment": "Barbell" },
+  { "name": "Barbell Row", "type": "strength", "muscleGroup": "Back", "equipment": "Barbell" },
+  { "name": "Pull-up", "type": "strength", "muscleGroup": "Back", "equipment": "Bodyweight" },
+  { "name": "Dumbbell Curl", "type": "strength", "muscleGroup": "Arms", "equipment": "Dumbbell" },
+  { "name": "Treadmill Run", "type": "cardio", "muscleGroup": "Conditioning", "equipment": "Treadmill" },
+  { "name": "Rowing Erg", "type": "cardio", "muscleGroup": "Conditioning", "equipment": "Rower" }
+] }

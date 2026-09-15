@@ -1,0 +1,3 @@
+{ "version": "0.0.1", "configurations": [
+  { "name": "workout-tracker", "runtimeExecutable": "python", "runtimeArgs": ["-m", "http.server", "5055"], "port": 5055 }
+] }
