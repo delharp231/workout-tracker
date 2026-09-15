@@ -1,6 +1,7 @@
 import { openDb, getAll, bulkPut } from './storage.js';
 import { newExercise } from './schema.js';
 import { renderLibrary } from './library.js';
+import { renderRoutines } from './routines.js';
 
 // Screen renderers are attached by their modules; stubbed here until their tasks land.
 const screens = {
@@ -12,6 +13,7 @@ const screens = {
 };
 export function registerScreen(name, fn) { screens[name] = fn; }
 registerScreen('library', renderLibrary);
+registerScreen('routines', renderRoutines);
 
 const titles = { log: 'Log', routines: 'Routines', library: 'Library', history: 'History', backup: 'Backup' };
 
