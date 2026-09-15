@@ -4,6 +4,7 @@ import { renderLibrary } from './library.js';
 import { renderRoutines } from './routines.js';
 import { renderLog } from './session.js';
 import { renderHistory } from './history.js';
+import { renderBackup } from './backup.js';
 
 // Screen renderers are attached by their modules; stubbed here until their tasks land.
 const screens = {
@@ -16,6 +17,7 @@ registerScreen('library', renderLibrary);
 registerScreen('routines', renderRoutines);
 registerScreen('log', renderLog);
 registerScreen('history', renderHistory);
+registerScreen('backup', renderBackup);
 
 const titles = { log: 'Log', routines: 'Routines', library: 'Library', history: 'History', backup: 'Backup' };
 
