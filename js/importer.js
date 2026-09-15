@@ -31,7 +31,7 @@ export function parseExerciseSeed(text) {
 }
 
 export function mergeExercises(existing, incoming) {
-  const seen = new Set(existing.map((e) => e.name.trim().toLowerCase()));
+  const seen = new Set(existing.map((e) => String(e.name || '').trim().toLowerCase()));
   const merged = [...existing];
   let added = 0, skipped = 0;
   for (const ex of incoming) {
