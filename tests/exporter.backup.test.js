@@ -25,3 +25,13 @@ test('serializeBackup round-trips through JSON', () => {
   assert.equal(parsed.schemaVersion, SCHEMA_VERSION);
   assert.deepEqual(parsed.sessions, state.sessions);
 });
+
+test('buildBackup fills defaults for an empty state', () => {
+  const b = buildBackup({});
+  assert.equal(b.schemaVersion, SCHEMA_VERSION);
+  assert.ok(!Number.isNaN(Date.parse(b.exportedAt)));
+  assert.equal(b.settings, null);
+  assert.deepEqual(b.exercises, []);
+  assert.deepEqual(b.routines, []);
+  assert.deepEqual(b.sessions, []);
+});
