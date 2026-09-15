@@ -33,3 +33,8 @@ test('parseExerciseSeed accepts a bare array or an {exercises:[]} wrapper', () =
   assert.deepEqual(parseExerciseSeed('{"exercises":[{"name":"Bench"}]}').exercises, [{ name: 'Bench' }]);
   assert.equal(parseExerciseSeed('{}').ok, false);
 });
+
+test('parseExerciseSeed rejects a null / primitive payload without throwing', () => {
+  assert.equal(parseExerciseSeed('null').ok, false);
+  assert.equal(parseExerciseSeed('42').ok, false);
+});

@@ -14,7 +14,7 @@ export function parseBackup(text) {
     }
     return { ok: true, data };
   } catch (e) {
-    return { ok: false, error: e.message };
+    return { ok: false, error: (e && e.message) || String(e) };
   }
 }
 
@@ -25,7 +25,7 @@ export function parseExerciseSeed(text) {
   } catch {
     return { ok: false, error: 'Could not parse JSON' };
   }
-  const list = Array.isArray(obj) ? obj : obj.exercises;
+  const list = Array.isArray(obj) ? obj : (obj && typeof obj === 'object' ? obj.exercises : undefined);
   if (!Array.isArray(list)) return { ok: false, error: 'Expected an array of exercises or {"exercises":[...]}' };
   return { ok: true, exercises: list };
 }
