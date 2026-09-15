@@ -58,7 +58,7 @@ export async function importState(state, mode) {
   const finalState = applyRestore(current, state, mode);
   await clearAll();
   const settings = finalState.settings
-    ? { key: 'app', units: 'lb', ...finalState.settings }
+    ? { units: 'lb', ...finalState.settings, key: 'app' }
     : { key: 'app', units: 'lb' };
   await putSingleton('settings', settings);
   await bulkPut('exercises', finalState.exercises ?? []);
