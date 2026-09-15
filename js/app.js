@@ -3,18 +3,19 @@ import { newExercise } from './schema.js';
 import { renderLibrary } from './library.js';
 import { renderRoutines } from './routines.js';
 import { renderLog } from './session.js';
+import { renderHistory } from './history.js';
 
 // Screen renderers are attached by their modules; stubbed here until their tasks land.
 const screens = {
   routines: (root) => root.append(Object.assign(document.createElement('p'), { textContent: 'Routines — Task 8' })),
   library: (root) => root.append(Object.assign(document.createElement('p'), { textContent: 'Library — Task 7' })),
-  history: (root) => root.append(Object.assign(document.createElement('p'), { textContent: 'History — Task 10' })),
   backup: (root) => root.append(Object.assign(document.createElement('p'), { textContent: 'Backup — Task 11' })),
 };
 export function registerScreen(name, fn) { screens[name] = fn; }
 registerScreen('library', renderLibrary);
 registerScreen('routines', renderRoutines);
 registerScreen('log', renderLog);
+registerScreen('history', renderHistory);
 
 const titles = { log: 'Log', routines: 'Routines', library: 'Library', history: 'History', backup: 'Backup' };
 
