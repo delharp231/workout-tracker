@@ -1,0 +1,7 @@
+.DS_Store
+Thumbs.db
+node_modules/
+*.log
+
+# SDD execution workspace (ledger, briefs, review packages) — scratch, not source
+.superpowers/
