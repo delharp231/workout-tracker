@@ -1,3 +1,5 @@
+import { SCHEMA_VERSION } from './schema.js';
+
 export const CSV_COLUMNS = [
   'date', 'session_name', 'exercise', 'exercise_type', 'set_number',
   'weight_lb', 'reps', 'rpe', 'rest_sec',
@@ -36,4 +38,19 @@ export function buildCsv(sessions, exerciseIndex) {
     }
   }
   return lines.join('\n') + '\n';
+}
+
+export function buildBackup({ settings, exercises, routines, sessions } = {}) {
+  return {
+    schemaVersion: SCHEMA_VERSION,
+    exportedAt: new Date().toISOString(),
+    settings: settings ?? null,
+    exercises: exercises ?? [],
+    routines: routines ?? [],
+    sessions: sessions ?? [],
+  };
+}
+
+export function serializeBackup(state) {
+  return JSON.stringify(buildBackup(state), null, 2);
 }
