@@ -1,11 +1,298 @@
-{ "exercises": [
-  { "name": "Back Squat", "type": "strength", "muscleGroup": "Legs", "equipment": "Barbell" },
-  { "name": "Deadlift", "type": "strength", "muscleGroup": "Posterior chain", "equipment": "Barbell" },
-  { "name": "Bench Press", "type": "strength", "muscleGroup": "Chest", "equipment": "Barbell" },
-  { "name": "Overhead Press", "type": "strength", "muscleGroup": "Shoulders", "equipment": "Barbell" },
-  { "name": "Barbell Row", "type": "strength", "muscleGroup": "Back", "equipment": "Barbell" },
-  { "name": "Pull-up", "type": "strength", "muscleGroup": "Back", "equipment": "Bodyweight" },
-  { "name": "Dumbbell Curl", "type": "strength", "muscleGroup": "Arms", "equipment": "Dumbbell" },
-  { "name": "Treadmill Run", "type": "cardio", "muscleGroup": "Conditioning", "equipment": "Treadmill" },
-  { "name": "Rowing Erg", "type": "cardio", "muscleGroup": "Conditioning", "equipment": "Rower" }
-] }
+{
+  "exercises": [
+    {
+      "name": "Barbell Bench Press",
+      "type": "strength",
+      "muscleGroup": "Chest",
+      "equipment": "Barbell"
+    },
+    {
+      "name": "Incline Barbell Bench Press",
+      "type": "strength",
+      "muscleGroup": "Chest",
+      "equipment": "Barbell"
+    },
+    {
+      "name": "Dumbbell Bench Press",
+      "type": "strength",
+      "muscleGroup": "Chest",
+      "equipment": "Dumbbell"
+    },
+    {
+      "name": "Incline Dumbbell Press",
+      "type": "strength",
+      "muscleGroup": "Chest",
+      "equipment": "Dumbbell"
+    },
+    {
+      "name": "Machine Chest Press",
+      "type": "strength",
+      "muscleGroup": "Chest",
+      "equipment": "Machine"
+    },
+    {
+      "name": "Pec Deck Fly",
+      "type": "strength",
+      "muscleGroup": "Chest",
+      "equipment": "Machine"
+    },
+    {
+      "name": "Overhead Press",
+      "type": "strength",
+      "muscleGroup": "Shoulders",
+      "equipment": "Barbell"
+    },
+    {
+      "name": "Dumbbell Shoulder Press",
+      "type": "strength",
+      "muscleGroup": "Shoulders",
+      "equipment": "Dumbbell"
+    },
+    {
+      "name": "Machine Shoulder Press",
+      "type": "strength",
+      "muscleGroup": "Shoulders",
+      "equipment": "Machine"
+    },
+    {
+      "name": "Dumbbell Lateral Raise",
+      "type": "strength",
+      "muscleGroup": "Shoulders",
+      "equipment": "Dumbbell"
+    },
+    {
+      "name": "Cable Lateral Raise",
+      "type": "strength",
+      "muscleGroup": "Shoulders",
+      "equipment": "Cable"
+    },
+    {
+      "name": "Triceps Pushdown",
+      "type": "strength",
+      "muscleGroup": "Arms",
+      "equipment": "Cable"
+    },
+    {
+      "name": "Overhead Cable Triceps Extension",
+      "type": "strength",
+      "muscleGroup": "Arms",
+      "equipment": "Cable"
+    },
+    {
+      "name": "Dips",
+      "type": "strength",
+      "muscleGroup": "Chest",
+      "equipment": "Bodyweight"
+    },
+    {
+      "name": "Pull-up",
+      "type": "strength",
+      "muscleGroup": "Back",
+      "equipment": "Bodyweight"
+    },
+    {
+      "name": "Lat Pulldown",
+      "type": "strength",
+      "muscleGroup": "Back",
+      "equipment": "Cable"
+    },
+    {
+      "name": "Barbell Row",
+      "type": "strength",
+      "muscleGroup": "Back",
+      "equipment": "Barbell"
+    },
+    {
+      "name": "Dumbbell Row",
+      "type": "strength",
+      "muscleGroup": "Back",
+      "equipment": "Dumbbell"
+    },
+    {
+      "name": "Seated Cable Row",
+      "type": "strength",
+      "muscleGroup": "Back",
+      "equipment": "Cable"
+    },
+    {
+      "name": "Chest-Supported Row",
+      "type": "strength",
+      "muscleGroup": "Back",
+      "equipment": "Machine"
+    },
+    {
+      "name": "Face Pull",
+      "type": "strength",
+      "muscleGroup": "Shoulders",
+      "equipment": "Cable"
+    },
+    {
+      "name": "Reverse Pec Deck",
+      "type": "strength",
+      "muscleGroup": "Shoulders",
+      "equipment": "Machine"
+    },
+    {
+      "name": "Barbell Curl",
+      "type": "strength",
+      "muscleGroup": "Arms",
+      "equipment": "Barbell"
+    },
+    {
+      "name": "Dumbbell Curl",
+      "type": "strength",
+      "muscleGroup": "Arms",
+      "equipment": "Dumbbell"
+    },
+    {
+      "name": "Cable Curl",
+      "type": "strength",
+      "muscleGroup": "Arms",
+      "equipment": "Cable"
+    },
+    {
+      "name": "Hammer Curl",
+      "type": "strength",
+      "muscleGroup": "Arms",
+      "equipment": "Dumbbell"
+    },
+    {
+      "name": "Barbell Shrug",
+      "type": "strength",
+      "muscleGroup": "Back",
+      "equipment": "Barbell"
+    },
+    {
+      "name": "Back Squat",
+      "type": "strength",
+      "muscleGroup": "Legs",
+      "equipment": "Barbell"
+    },
+    {
+      "name": "Front Squat",
+      "type": "strength",
+      "muscleGroup": "Legs",
+      "equipment": "Barbell"
+    },
+    {
+      "name": "Hack Squat",
+      "type": "strength",
+      "muscleGroup": "Legs",
+      "equipment": "Machine"
+    },
+    {
+      "name": "Leg Press",
+      "type": "strength",
+      "muscleGroup": "Legs",
+      "equipment": "Machine"
+    },
+    {
+      "name": "Romanian Deadlift",
+      "type": "strength",
+      "muscleGroup": "Posterior chain",
+      "equipment": "Barbell"
+    },
+    {
+      "name": "Conventional Deadlift",
+      "type": "strength",
+      "muscleGroup": "Posterior chain",
+      "equipment": "Barbell"
+    },
+    {
+      "name": "Hip Thrust",
+      "type": "strength",
+      "muscleGroup": "Posterior chain",
+      "equipment": "Barbell"
+    },
+    {
+      "name": "Bulgarian Split Squat",
+      "type": "strength",
+      "muscleGroup": "Legs",
+      "equipment": "Dumbbell"
+    },
+    {
+      "name": "Walking Lunge",
+      "type": "strength",
+      "muscleGroup": "Legs",
+      "equipment": "Dumbbell"
+    },
+    {
+      "name": "Leg Extension",
+      "type": "strength",
+      "muscleGroup": "Legs",
+      "equipment": "Machine"
+    },
+    {
+      "name": "Seated Leg Curl",
+      "type": "strength",
+      "muscleGroup": "Posterior chain",
+      "equipment": "Machine"
+    },
+    {
+      "name": "Lying Leg Curl",
+      "type": "strength",
+      "muscleGroup": "Posterior chain",
+      "equipment": "Machine"
+    },
+    {
+      "name": "Standing Calf Raise",
+      "type": "strength",
+      "muscleGroup": "Legs",
+      "equipment": "Machine"
+    },
+    {
+      "name": "Seated Calf Raise",
+      "type": "strength",
+      "muscleGroup": "Legs",
+      "equipment": "Machine"
+    },
+    {
+      "name": "Stationary Bike",
+      "type": "cardio",
+      "muscleGroup": "Conditioning",
+      "equipment": "Bike"
+    },
+    {
+      "name": "Air Bike",
+      "type": "cardio",
+      "muscleGroup": "Conditioning",
+      "equipment": "Bike"
+    },
+    {
+      "name": "Rowing Erg",
+      "type": "cardio",
+      "muscleGroup": "Conditioning",
+      "equipment": "Rower"
+    },
+    {
+      "name": "Incline Treadmill Walk",
+      "type": "cardio",
+      "muscleGroup": "Conditioning",
+      "equipment": "Treadmill"
+    },
+    {
+      "name": "Treadmill Run",
+      "type": "cardio",
+      "muscleGroup": "Conditioning",
+      "equipment": "Treadmill"
+    },
+    {
+      "name": "Stair Climber",
+      "type": "cardio",
+      "muscleGroup": "Conditioning",
+      "equipment": "Stair"
+    },
+    {
+      "name": "Elliptical",
+      "type": "cardio",
+      "muscleGroup": "Conditioning",
+      "equipment": "Elliptical"
+    },
+    {
+      "name": "Outdoor Walk",
+      "type": "cardio",
+      "muscleGroup": "Conditioning",
+      "equipment": "None"
+    }
+  ]
+}

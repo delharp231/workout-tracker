@@ -1,0 +1,37 @@
+{
+  "routines": [
+    {
+      "name": "Push (Cycle 1)",
+      "items": [
+        { "exercise": "Barbell Bench Press", "targetSets": 3, "targetReps": 8, "note": "6-8 @ RIR 2, rest ~2 min" },
+        { "exercise": "Overhead Press", "targetSets": 3, "targetReps": 9, "note": "8-10 @ RIR 2" },
+        { "exercise": "Incline Dumbbell Press", "targetSets": 2, "targetReps": 11, "note": "10-12 @ RIR 1-2" },
+        { "exercise": "Cable Lateral Raise", "targetSets": 3, "targetReps": 13, "note": "12-15 @ RIR 0-1" },
+        { "exercise": "Triceps Pushdown", "targetSets": 3, "targetReps": 11, "note": "10-12 @ RIR 1" },
+        { "exercise": "Stationary Bike", "targetSets": null, "targetReps": null, "note": "Cardio finisher, do LAST: ~8 min, 30s hard / 60s easy x5-6" }
+      ]
+    },
+    {
+      "name": "Pull (Cycle 1)",
+      "items": [
+        { "exercise": "Lat Pulldown", "targetSets": 3, "targetReps": 9, "note": "8-10 @ RIR 2 (or Pull-up)" },
+        { "exercise": "Chest-Supported Row", "targetSets": 3, "targetReps": 9, "note": "8-10 @ RIR 2" },
+        { "exercise": "Seated Cable Row", "targetSets": 2, "targetReps": 11, "note": "10-12 @ RIR 1-2" },
+        { "exercise": "Face Pull", "targetSets": 3, "targetReps": 15, "note": "~15 reps, shoulder health" },
+        { "exercise": "Dumbbell Curl", "targetSets": 3, "targetReps": 11, "note": "10-12 @ RIR 1" },
+        { "exercise": "Rowing Erg", "targetSets": null, "targetReps": null, "note": "Cardio finisher, do LAST: ~8 min, 30s hard / 60s easy x5-6" }
+      ]
+    },
+    {
+      "name": "Legs (Cycle 1)",
+      "items": [
+        { "exercise": "Back Squat", "targetSets": 3, "targetReps": 7, "note": "6-8 @ RIR 2-3, rest ~2-3 min (or Hack Squat)" },
+        { "exercise": "Romanian Deadlift", "targetSets": 3, "targetReps": 9, "note": "8-10 @ RIR 2" },
+        { "exercise": "Leg Press", "targetSets": 2, "targetReps": 13, "note": "12-15 @ RIR 1" },
+        { "exercise": "Seated Leg Curl", "targetSets": 3, "targetReps": 11, "note": "10-12 @ RIR 1" },
+        { "exercise": "Standing Calf Raise", "targetSets": 3, "targetReps": 13, "note": "12-15" },
+        { "exercise": "Stationary Bike", "targetSets": null, "targetReps": null, "note": "Easy Zone-2 cool-down ~6-8 min (NOT hard intervals on leg day)" }
+      ]
+    }
+  ]
+}

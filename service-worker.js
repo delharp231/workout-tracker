@@ -1,10 +1,10 @@
-const CACHE = 'wt-v1';
+const CACHE = 'wt-v2';
 const SHELL = [
   './', './index.html', './css/app.css', './manifest.webmanifest',
   './js/app.js', './js/ui.js', './js/storage.js', './js/schema.js',
   './js/exporter.js', './js/importer.js', './js/library.js', './js/routines.js',
   './js/session.js', './js/history.js', './js/backup.js',
-  './seed/exercises.default.json',
+  './seed/exercises.default.json', './seed/routines.default.json',
   './icons/icon-192.png', './icons/icon-512.png', './icons/icon-maskable-512.png',
 ];
 
