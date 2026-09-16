@@ -254,7 +254,12 @@ async function renderActive(root, session) {
   });
 
   async function finish() {
-    await save(); // flush, though every prior edit already persisted itself
+    try {
+      await put('sessions', session);
+    } catch {
+      showSaveError();
+      return;
+    }
     localStorage.removeItem(ACTIVE_KEY);
     showScreen('history');
   }
