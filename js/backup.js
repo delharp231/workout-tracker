@@ -115,6 +115,10 @@ async function importJson(root) {
     await importBackupFlow(root, picked.name, backupResult.data);
     return;
   }
+  if (backupResult.code === 'VERSION') {
+    showNotice(root, backupResult.error);
+    return;
+  }
 
   const seedResult = parseExerciseSeed(picked.text);
   if (seedResult.ok) {

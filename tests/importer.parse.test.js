@@ -17,9 +17,10 @@ test('parseBackup rejects malformed JSON', () => {
 });
 
 test('parseBackup rejects a newer schema version', () => {
-  const text = JSON.stringify({ schemaVersion: SCHEMA_VERSION + 1, exercises: [] });
+  const text = JSON.stringify({ schemaVersion: SCHEMA_VERSION + 1, exercises: [], routines: [], sessions: [] });
   const r = parseBackup(text);
   assert.equal(r.ok, false);
+  assert.equal(r.code, 'VERSION');
   assert.match(r.error, /newer/i);
 });
 

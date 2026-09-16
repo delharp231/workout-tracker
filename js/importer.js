@@ -1,4 +1,4 @@
-import { migrate } from './schema.js';
+import { migrate, SCHEMA_VERSION } from './schema.js';
 
 export function parseBackup(text) {
   let obj;
@@ -6,6 +6,9 @@ export function parseBackup(text) {
     obj = JSON.parse(text);
   } catch {
     return { ok: false, error: 'Could not parse JSON — is this a backup file?' };
+  }
+  if (obj && typeof obj === 'object' && typeof obj.schemaVersion === 'number' && obj.schemaVersion > SCHEMA_VERSION) {
+    return { ok: false, code: 'VERSION', error: `This backup is from a newer app version (v${obj.schemaVersion}); update the app first.` };
   }
   try {
     const data = migrate(obj);
