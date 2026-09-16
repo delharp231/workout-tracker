@@ -39,7 +39,7 @@ async function seedIfEmpty() {
 
 async function boot() {
   await openDb();
-  await seedIfEmpty();
+  try { await seedIfEmpty(); } catch (e) { console.warn('First-run seed skipped:', e); }
   document.querySelectorAll('.tabbar button').forEach((b) =>
     b.addEventListener('click', () => showScreen(b.dataset.screen)));
   showScreen('log');

@@ -123,10 +123,20 @@ async function renderActive(root, session) {
   const exIndex = new Map(exercises.map((e) => [e.id, e]));
   const pickable = exercises.filter((e) => !e.hidden).sort((a, b) => a.name.localeCompare(b.name));
 
+  // Prominent, persistent warning if a save ever fails (storage quota,
+  // transaction abort) — shown once and left visible; the "persisted
+  // immediately" guarantee must never fail silently.
+  const saveError = el('div', {
+    class: 'save-error',
+    text: "⚠ Couldn't save your last change — check device storage.",
+  });
+  saveError.hidden = true;
+  function showSaveError() { saveError.hidden = false; }
+
   // The single persistence chokepoint: every mutation below (add entry, add
   // set, any field edit) calls this — never a direct `put` of its own — so
   // closing the tab mid-set can't lose anything (no batching, no save-on-finish).
-  const save = () => put('sessions', session);
+  const save = () => put('sessions', session).catch(() => showSaveError());
 
   function exerciseLabel(exerciseId) {
     const e = exIndex.get(exerciseId);
@@ -258,6 +268,7 @@ async function renderActive(root, session) {
   root.append(
     el('h2', { text: session.name }),
     el('div', { class: 'muted', text: new Date(session.date).toLocaleString() }),
+    saveError,
     entriesList,
     field('Add exercise', 'log-add-exercise', addExercisePicker),
     el('div', { class: 'row' }, [

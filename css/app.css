@@ -13,3 +13,5 @@ input, select { font:inherit; color:var(--ink); background:#0e141b; border:1px s
 .tabbar button { border:none; border-radius:0; min-height:56px; font-size:13px; color:var(--muted); }
 .tabbar button[aria-current="true"] { color:var(--accent); }
 .muted { color:var(--muted); }
+.save-error { background:#3a1414; color:#ffb4b4; border:1px solid #7a3030; border-radius:12px; padding:12px; font-weight:600; }
+.save-error[hidden] { display:none; }
