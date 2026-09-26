@@ -36,12 +36,13 @@ function routineCard(root, r, exercises) {
   return el('div', { class: 'card row' }, [
     info,
     el('button', { text: 'Edit', onclick: () => openEditor(root, r, exercises) }),
-    el('button', { text: 'Delete', onclick: () => deleteRoutine(root, r.id) }),
+    el('button', { text: 'Delete', onclick: () => deleteRoutine(root, r) }),
   ]);
 }
 
-async function deleteRoutine(root, id) {
-  await remove('routines', id);
+async function deleteRoutine(root, r) {
+  if (!confirm(`Delete routine "${r.name}"? Past workouts are kept.`)) return;
+  await remove('routines', r.id);
   await refresh(root);
 }
 
@@ -119,7 +120,7 @@ function openEditor(root, existing, exercises) {
   }
 
   const picker = el('select', {}, [
-    el('option', { value: '', text: '+ Add exercise…', disabled: true }),
+    el('option', { value: '', text: '+ Add exercise…', disabled: true, selected: true }),
     ...pickable.map((e) => el('option', { value: e.id, text: e.name })),
   ]);
   picker.addEventListener('change', () => {

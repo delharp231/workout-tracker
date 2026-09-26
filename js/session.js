@@ -72,7 +72,9 @@ async function renderStart(root) {
   routines.sort((a, b) => a.name.localeCompare(b.name));
 
   const picker = el('select', {}, [
-    el('option', { value: '', text: 'Start from routine…', disabled: true }),
+    // `selected` matters: without it the browser pre-selects the first routine, and
+    // picking that routine fires no change event, so it can never be started.
+    el('option', { value: '', text: 'Start from routine…', disabled: true, selected: true }),
     ...routines.map((r) => el('option', { value: r.id, text: r.name })),
   ]);
   picker.addEventListener('change', () => {
@@ -241,7 +243,7 @@ async function renderActive(root, session) {
   }
 
   const addExercisePicker = el('select', {}, [
-    el('option', { value: '', text: '+ Add exercise…', disabled: true }),
+    el('option', { value: '', text: '+ Add exercise…', disabled: true, selected: true }),
     ...pickable.map((e) => el('option', { value: e.id, text: e.name })),
   ]);
   addExercisePicker.addEventListener('change', async () => {
@@ -265,6 +267,8 @@ async function renderActive(root, session) {
   }
 
   async function discard() {
+    const setCount = session.entries.reduce((n, e) => n + ((e.sets && e.sets.length) || 0), 0);
+    if (setCount > 0 && !confirm(`Discard this workout? ${setCount} logged set${setCount === 1 ? '' : 's'} will be deleted.`)) return;
     await remove('sessions', session.id);
     localStorage.removeItem(ACTIVE_KEY);
     await refresh(root);

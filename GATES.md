@@ -16,7 +16,7 @@ A deploy is allowed only when the automated tests pass and every box below is ch
 
 - [ ] Fresh load seeds the library from `seed/exercises.default.json`, and the list renders it sorted by name with muscle-group · equipment subtitles.
 - [ ] Search filters the list by exercise name **and** by equipment/muscle group, case-insensitive, as you type.
-- [ ] "Show hidden" checkbox brings hidden exercises back into view; unchecked, they stay out of the default list.
+- [ ] "Show hidden" checkbox brings hidden exercises back into view; unchecked, they stay out of the default list. The checkbox is normal size (~24px) and its label sits on one line beside it.
 - [ ] + Add exercise persists a new row (name, type, muscle group, equipment) and it shows up in the list right away, marked custom.
 - [ ] Edit saves changes to an existing exercise in place — same id afterward, no duplicate row.
 - [ ] Hide is a soft-delete: the exercise drops out of the default list but still exists (visible again with "Show hidden" checked); Unhide restores it to the default list.
@@ -28,11 +28,15 @@ A deploy is allowed only when the automated tests pass and every box below is ch
 - [ ] ↑ / ↓ reorders items, and target sets/reps stay attached to the correct exercise through the reorder (no values swapped between rows).
 - [ ] Save persists the routine, and the routines list shows it with the correct "N exercises" count.
 - [ ] Edit an existing routine preserves its id (no duplicate created) and saves the updated name/items/order.
-- [ ] Delete removes the routine from the list.
+- [ ] Delete asks for confirmation first; Cancel keeps the routine, OK removes it from the list.
+- [ ] The routine editor's "+ Add exercise…" picker shows its placeholder (not the first exercise), and the alphabetically first exercise can be added.
 
 ## Log (core)
 
 - [ ] Start freestyle opens an empty active session immediately — no routine required.
+- [ ] The "Start from routine" picker shows its placeholder, not a routine, and **the alphabetically first routine starts** when picked (regression: it used to be pre-selected, so picking it did nothing).
+- [ ] The in-session "+ Add exercise…" picker shows its placeholder, and the alphabetically first exercise can be added.
+- [ ] Discard with logged sets asks for confirmation naming the set count; Cancel keeps the workout. Discard with no sets goes straight through.
 - [ ] Start from routine pre-adds one entry per routine item, correctly split into a strength or cardio card based on the exercise's type.
 - [ ] Add set appends a new row under an exercise, and weight/reps/RPE/note each write back to that exact row (not a neighboring one).
 - [ ] A weight, reps, or RPE of exactly 0 is kept as 0 — not blanked — after leaving the field, after the screen redraws (e.g. adding another exercise), and after a reload.
