@@ -51,3 +51,16 @@ test('applyRestore merge unions by id (existing wins) and merges exercises by na
   assert.equal(out.sessions.find(s => s.id === 's1').name, 'EXISTING');
   assert.equal(out.settings.units, 'lb');
 });
+
+test('applyRestore replace takes incoming bodyweight (or none)', () => {
+  const existing = { settings: {}, exercises: [], routines: [], sessions: [], bodyweight: [{ date: '2026-09-01', weightLb: 205 }] };
+  assert.deepEqual(applyRestore(existing, { bodyweight: [{ date: '2026-09-02', weightLb: 204 }] }, 'replace').bodyweight, [{ date: '2026-09-02', weightLb: 204 }]);
+  assert.deepEqual(applyRestore(existing, {}, 'replace').bodyweight, []);
+});
+
+test('applyRestore merge unions bodyweight by date, existing wins', () => {
+  const existing = { settings: {}, exercises: [], routines: [], sessions: [], bodyweight: [{ date: '2026-09-01', weightLb: 205 }] };
+  const incoming = { bodyweight: [{ date: '2026-09-01', weightLb: 999 }, { date: '2026-09-02', weightLb: 204 }] };
+  const out = applyRestore(existing, incoming, 'merge').bodyweight;
+  assert.deepEqual(out.map((b) => [b.date, b.weightLb]), [['2026-09-01', 205], ['2026-09-02', 204]]);
+});

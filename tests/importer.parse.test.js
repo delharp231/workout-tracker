@@ -39,3 +39,14 @@ test('parseExerciseSeed rejects a null / primitive payload without throwing', ()
   assert.equal(parseExerciseSeed('null').ok, false);
   assert.equal(parseExerciseSeed('42').ok, false);
 });
+
+test('parseBackup migrates a v1 backup to the v2 shape', () => {
+  const v1 = { schemaVersion: 1, settings: null, exercises: [], sessions: [], routines: [
+    { id: 'r', name: 'Arms', createdAt: 'T', updatedAt: 'U', items: [{ exerciseId: 'e', targetSets: 2, targetReps: 12, note: '' }] },
+  ] };
+  const r = parseBackup(JSON.stringify(v1));
+  assert.equal(r.ok, true);
+  assert.equal(r.data.schemaVersion, 2);
+  assert.equal(r.data.routines[0].items[0].repMax, 12);
+  assert.deepEqual(r.data.bodyweight, []);
+});
