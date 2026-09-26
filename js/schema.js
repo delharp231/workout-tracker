@@ -1,4 +1,4 @@
-export const SCHEMA_VERSION = 1;
+export const SCHEMA_VERSION = 2;
 export const VALID_TYPES = ['strength', 'cardio'];
 export const RIR_MAX = 4;
 
@@ -142,8 +142,95 @@ export function buildStarterRoutines(seed, exercises) {
     .filter(Boolean);
 }
 
-export function migrate(data) {
+// v1 → v2 (spec §5.1). Pure: returns a new state, never mutates `state`. Idempotent.
+// With `seedRoutines`, unedited starter routines (updatedAt === createdAt) get the seed's
+// prescriptions. With `seedExerciseNames`, unused non-custom exercises that aren't in the
+// current seed (old placeholders like "Bench Press") are hidden. Hidden, never deleted.
+export function migrateV1toV2(state, { seedRoutines = null, seedExerciseNames = null } = {}) {
+  const exercisesIn = state.exercises ?? [];
+
+  // 1. Routines: range fields, position (seed order first, then by name), origin.
+  const seedOrder = (seedRoutines ?? []).map((r) => norm(r.name));
+  const rank = (r) => {
+    const i = seedOrder.indexOf(norm(r.name));
+    return i === -1 ? seedOrder.length : i;
+  };
+  const ordered = [...(state.routines ?? [])].sort((a, b) => rank(a) - rank(b) || String(a.name).localeCompare(String(b.name)));
+  let routines = ordered.map((r, i) => ({
+    ...r,
+    position: Number.isFinite(r.position) ? r.position : i,
+    origin: r.origin ?? null,
+    items: (r.items || []).filter((it) => it && it.exerciseId).map((it) => newRoutineItem({
+      exerciseId: it.exerciseId,
+      targetSets: it.targetSets ?? null,
+      repMin: it.repMin ?? it.targetReps ?? null,
+      repMax: it.repMax ?? it.targetReps ?? null,
+      rirMin: it.rirMin ?? null,
+      rirMax: it.rirMax ?? null,
+      note: it.note ?? '',
+    })),
+  }));
+
+  // 2. Starter refresh: only routines you never edited.
+  if (seedRoutines) {
+    const idByName = idsByName(exercisesIn);
+    routines = routines.map((r) => {
+      const seed = seedRoutines.find((s) => norm(s.name) === norm(r.name));
+      if (!seed || r.updatedAt !== r.createdAt) return r;
+      const items = seedItemsFor(seed, idByName);
+      return items.length ? { ...r, items, origin: { cycle: seed.cycle, key: seed.key } } : r;
+    });
+  }
+
+  // 3. Sessions.
+  const sessions = (state.sessions ?? []).map((s) => ({
+    ...s,
+    notes: s.notes ?? '',
+    finishedAt: s.finishedAt ?? null,
+    cursor: Number.isInteger(s.cursor) ? s.cursor : 0,
+    entries: (s.entries || []).map((e) => (e.type === 'cardio'
+      ? {
+        ...e,
+        target: e.target ?? null,
+        // v1 pre-added cardio from routines whether or not you did it: done = something was logged.
+        done: typeof e.done === 'boolean' ? e.done : (e.durationSec != null || e.distance != null),
+      }
+      : {
+        ...e,
+        target: e.target ?? null,
+        sets: (e.sets || []).map((set) => ({
+          weight: set.weight ?? null, reps: set.reps ?? null, rir: set.rir ?? null,
+          rpe: set.rpe ?? null, note: set.note ?? '', loggedAt: set.loggedAt ?? null,
+        })),
+      })),
+  }));
+
+  // 4. Exercises: weightStep, and hide unused legacy defaults.
+  const referenced = new Set();
+  for (const r of routines) for (const it of r.items) referenced.add(it.exerciseId);
+  for (const s of sessions) for (const e of s.entries) referenced.add(e.exerciseId);
+  const seedNames = seedExerciseNames ? new Set(seedExerciseNames.map(norm)) : null;
+  const exercises = exercisesIn.map((e) => {
+    const out = { ...e, weightStep: e.weightStep ?? null };
+    if (seedNames && e.custom === false && !seedNames.has(norm(e.name)) && !referenced.has(e.id)) out.hidden = true;
+    return out;
+  });
+
+  return {
+    ...state,
+    settings: { ...defaultSettings(), ...(state.settings ?? {}), key: 'app' },
+    exercises,
+    routines,
+    sessions,
+    bodyweight: state.bodyweight ?? [],
+  };
+}
+
+// Brings an imported backup up to SCHEMA_VERSION. `opts` is passed to the v1 → v2 step.
+export function migrate(data, opts = {}) {
   const v = data?.schemaVersion ?? SCHEMA_VERSION;
   if (v > SCHEMA_VERSION) throw new Error(`Backup is from a newer version (${v}); update the app first`);
-  return data;
+  let out = data;
+  if (v < 2) out = { ...migrateV1toV2(out, opts), schemaVersion: 2 };
+  return out;
 }
