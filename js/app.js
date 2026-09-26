@@ -1,5 +1,7 @@
-import { openDb, getAll, bulkPut, put } from './storage.js';
-import { newExercise, newRoutine, newRoutineItem } from './schema.js';
+import { openDb, getAll, bulkPut, getMeta, readAll, writeAll } from './storage.js';
+import { SCHEMA_VERSION, newExercise, buildStarterRoutines, migrateV1toV2 } from './schema.js';
+import { LEGACY_STARTER_SEEDED } from './keys.js';
+import { el, clear, download } from './ui.js';
 import { renderLibrary } from './library.js';
 import { renderRoutines } from './routines.js';
 import { renderLog } from './session.js';
@@ -29,7 +31,7 @@ export function showScreen(name, arg) {
   }
   const token = ++screenToken;
   const root = document.getElementById('screen');
-  while (root.firstChild) root.removeChild(root.firstChild);
+  clear(root);
   document.getElementById('screen-title').textContent = titles[name] ?? name;
   document.querySelectorAll('.tabbar button').forEach((b) => b.setAttribute('aria-current', String(b.dataset.screen === name)));
   Promise.resolve((screens[name] ?? screens.log)(root, arg)).then((fn) => {
@@ -41,49 +43,85 @@ export function showScreen(name, arg) {
 
 const norm = (s) => String(s ?? '').trim().toLowerCase();
 
-// Merge the built-in exercise library by name: adds any default exercise the store
-// doesn't already have. Idempotent and non-destructive - never clobbers your edits or hides.
+async function fetchJson(path) {
+  const res = await fetch(path);
+  if (!res.ok) throw new Error(`Couldn't load ${path} (${res.status})`);
+  return res.json();
+}
+
+// Brings the database to SCHEMA_VERSION (spec §5.2): a fresh install is seeded, v1 data is
+// migrated. Either way it's one writeAll transaction, so a failure leaves v1 data untouched.
+async function ensureSchema() {
+  const version = await getMeta();
+  if (version === SCHEMA_VERSION) return;
+  if (version !== null && version > SCHEMA_VERSION) throw new Error(`This data is from a newer app version (v${version}).`);
+  const [exSeed, rtSeed] = await Promise.all([
+    fetchJson('./seed/exercises.default.json'),
+    fetchJson('./seed/routines.default.json'),
+  ]);
+  const state = await readAll();
+  if (version === null && state.exercises.length === 0) {
+    const exercises = exSeed.exercises.map((e) => newExercise({ ...e, custom: false }));
+    await writeAll({ ...state, exercises, routines: buildStarterRoutines(rtSeed, exercises) }, SCHEMA_VERSION);
+    return;
+  }
+  const migrated = migrateV1toV2(state, {
+    seedRoutines: rtSeed.routines,
+    seedExerciseNames: exSeed.exercises.map((e) => e.name),
+  });
+  await writeAll(migrated, SCHEMA_VERSION);
+}
+
+// Adds any default exercise the library doesn't have yet (by name). Never edits or un-hides.
 async function syncDefaultExercises() {
   const have = new Set((await getAll('exercises')).map((e) => norm(e.name)));
-  const res = await fetch('./seed/exercises.default.json');
-  const { exercises } = await res.json();
+  const { exercises } = await fetchJson('./seed/exercises.default.json');
   const toAdd = exercises.filter((e) => !have.has(norm(e.name))).map((e) => newExercise({ ...e, custom: false }));
   if (toAdd.length) await bulkPut('exercises', toAdd);
 }
 
-// Seed the starter (Cycle 1) routines once, resolving each item's exercise name to its id.
-// Guarded by a localStorage flag so a routine you later delete does not reappear.
-async function seedStarterRoutines() {
-  try { if (localStorage.getItem('starterRoutinesSeeded')) return; } catch { return; }
-  const res = await fetch('./seed/routines.default.json');
-  const { routines } = await res.json();
-  const idByName = {};
-  for (const e of await getAll('exercises')) idByName[norm(e.name)] = e.id;
-  const existing = new Set((await getAll('routines')).map((r) => norm(r.name)));
-  for (const r of routines) {
-    if (existing.has(norm(r.name))) continue;
-    const items = (r.items || [])
-      .map((it) => {
-        const exerciseId = idByName[norm(it.exercise)];
-        return exerciseId
-          ? newRoutineItem({ exerciseId, targetSets: it.targetSets ?? null, targetReps: it.targetReps ?? null, note: it.note || '' })
-          : null;
-      })
-      .filter(Boolean);
-    if (items.length) await put('routines', newRoutine({ name: r.name, items }));
+// Blocking screen shown when the upgrade fails. Nothing was written, so a raw download is the
+// user's safety net before anything else is tried.
+export function renderUpgradeFailure(err) {
+  const root = document.getElementById('screen');
+  clear(root);
+  document.getElementById('screen-title').textContent = 'Update problem';
+  document.querySelector('.tabbar').hidden = true;
+  root.append(
+    el('div', { class: 'save-error', role: 'alert', text: "The update couldn't upgrade your data. Nothing was changed. Download a backup, then reload." }),
+    el('p', { class: 'muted small', text: String((err && err.message) || err) }),
+    el('button', { class: 'primary btn-block', text: 'Download backup', onclick: () => downloadRawBackup(root) }),
+    el('button', { class: 'btn-block', text: 'Reload', onclick: () => location.reload() }),
+  );
+}
+
+async function downloadRawBackup(root) {
+  try {
+    const raw = await readAll();
+    const payload = {
+      schemaVersion: 1, exportedAt: new Date().toISOString(),
+      settings: raw.settings, exercises: raw.exercises, routines: raw.routines, sessions: raw.sessions,
+    };
+    download(`workout-backup-raw-${new Date().toISOString().slice(0, 10)}.json`, JSON.stringify(payload, null, 2), 'application/json');
+  } catch (e) {
+    root.append(el('p', { class: 'error', role: 'alert', text: `Couldn't read the data either: ${(e && e.message) || e}` }));
   }
-  try { localStorage.setItem('starterRoutinesSeeded', '1'); } catch { /* ignore */ }
 }
 
 async function boot() {
-  await openDb();
-  try { await syncDefaultExercises(); } catch (e) { console.warn('Exercise sync skipped:', e); }
-  try { await seedStarterRoutines(); } catch (e) { console.warn('Routine seed skipped:', e); }
-  document.querySelectorAll('.tabbar button').forEach((b) =>
-    b.addEventListener('click', () => showScreen(b.dataset.screen)));
-  showScreen('log');
-  if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('./service-worker.js').catch(() => {});
+  // Register first, so a fixed release can still reach a phone that's stuck on the failure screen.
+  if ('serviceWorker' in navigator) navigator.serviceWorker.register('./service-worker.js').catch(() => {});
+  try {
+    await openDb();
+    await ensureSchema();
+    try { localStorage.removeItem(LEGACY_STARTER_SEEDED); } catch { /* ignore */ }
+  } catch (e) {
+    console.error('Upgrade failed:', e);
+    renderUpgradeFailure(e);
+    return;
   }
+  try { await syncDefaultExercises(); } catch (e) { console.warn('Exercise sync skipped:', e); }
+  document.querySelectorAll('.tabbar button').forEach((b) => b.addEventListener('click', () => showScreen(b.dataset.screen)));
+  showScreen('log');
 }
 boot();
