@@ -164,7 +164,7 @@ Target = { sets: int|null, repMin: int|null, repMax: int|null,
    - Set `finishedAt = null` and `cursor = 0`.
    - Each entry gets `target = null`.
    - Strength sets gain `rir = null` and `loggedAt = null`; their `rpe` is kept and `restSec` is dropped.
-   - Cardio entries gain `done = true`, since legacy cardio was deliberately logged.
+   - Cardio entries gain `done` = whether a duration or distance was logged. (v1 pre-added cardio from routines whether or not you did it, so an empty legacy cardio entry means it wasn't done.)
 4. **Exercises.**
    - Every exercise gains `weightStep = null`.
    - **Legacy default cleanup:** an exercise is set `hidden = true` when all three hold: `custom === false`, its name isn't in `seedExerciseNames`, and no routine item or session entry references its id. It's hidden, never deleted, so "Show hidden" brings it back.
@@ -683,7 +683,7 @@ The existing 29 tests stay green. New tests:
 
 | Module | Cases |
 |---|---|
-| `schema` | `migrateV1toV2`: targetReps → min/max; the starter refresh applies only to unedited routines; edited routines are untouched; legacy defaults are hidden only when unreferenced; cardio `done = true`; the RPE kept; it's idempotent; settings get defaults. `migrate` chain: v1 → v2; v2 unchanged; v3 rejected. |
+| `schema` | `migrateV1toV2`: targetReps → min/max; the starter refresh applies only to unedited routines; edited routines are untouched; legacy defaults are hidden only when unreferenced; cardio `done` follows whether anything was logged; the RPE kept; it's idempotent; settings get defaults. `migrate` chain: v1 → v2; v2 unchanged; v3 rejected. |
 | `format` | `parseDuration` accepts `mm:ss`, `h:mm:ss` and bare seconds, and rejects `1:2:3:4`, negatives and letters. `formatDuration` crosses an hour. `formatTarget` covers every null combination. `formatSets` covers equal and mixed weights and bodyweight. |
 | `progression` | `lastPerformance` skips the in-progress session and sessions without that exercise, and picks the most recent. `prefillSet` follows the precedence in order. `nextRoutine` wraps, skips deleted routines, and handles no history. `suggestNext` covers increase, hold on a missed rep, hold on too-low RIR, hold on too few sets, null cases, and mixed weights using the heaviest. |
 | `stats` | `e1rm` bounds. `markPrs` never marks the first set and needs strictly greater. `weekBounds` over a Sunday → Monday boundary. `weeklySetsByMuscle` excludes Conditioning, cardio and unfinished sessions. `bodyweightRate` returns null with an empty window and gets the sign right. `cycleWeek`. |
