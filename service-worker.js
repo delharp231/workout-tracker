@@ -4,6 +4,7 @@ const SHELL = [
   './js/app.js', './js/ui.js', './js/storage.js', './js/schema.js',
   './js/exporter.js', './js/importer.js', './js/library.js', './js/routines.js',
   './js/session.js', './js/history.js', './js/backup.js',
+  './js/format.js',
   './seed/exercises.default.json', './seed/routines.default.json',
   './icons/icon-192.png', './icons/icon-512.png', './icons/icon-maskable-512.png',
 ];
