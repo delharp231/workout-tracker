@@ -1,8 +1,11 @@
 import { applyRestore } from './importer.js';
+import { defaultSettings, SCHEMA_VERSION } from './schema.js';
 
 const DB_NAME = 'workout-tracker';
-const DB_VERSION = 1;
-const KEYED = { exercises: 'id', routines: 'id', sessions: 'id', settings: 'key', meta: 'key' };
+const DB_VERSION = 2;
+const KEYED = { exercises: 'id', routines: 'id', sessions: 'id', settings: 'key', meta: 'key', bodyweight: 'date' };
+const DATA_STORES = ['exercises', 'routines', 'sessions', 'bodyweight'];
+export const STORES = Object.keys(KEYED);
 
 let dbPromise = null;
 
@@ -16,52 +19,95 @@ export function openDb() {
         if (!db.objectStoreNames.contains(store)) db.createObjectStore(store, { keyPath });
       }
     };
-    req.onsuccess = () => resolve(req.result);
+    req.onsuccess = () => {
+      const db = req.result;
+      // Let a newer version (or the dev fixture loader) upgrade/delete the database instead of blocking.
+      db.onversionchange = () => { db.close(); dbPromise = null; };
+      resolve(db);
+    };
     req.onerror = () => reject(req.error);
   });
   return dbPromise;
 }
 
-async function tx(store, mode, fn) {
+const reqP = (r) => new Promise((res, rej) => { r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error); });
+
+// Runs fn over one or more stores in ONE transaction. Resolves with fn's result once the
+// transaction commits; if fn throws (e.g. a put with no key) or any request fails, every write
+// in it is rolled back and the promise rejects. fn must only await IndexedDB requests.
+export async function transact(storeNames, mode, fn) {
   const db = await openDb();
+  const names = [].concat(storeNames);
   return new Promise((resolve, reject) => {
-    const t = db.transaction(store, mode);
-    const os = t.objectStore(store);
+    const t = db.transaction(names, mode);
+    const stores = Object.fromEntries(names.map((n) => [n, t.objectStore(n)]));
     let result;
-    Promise.resolve(fn(os)).then((r) => { result = r; });
-    t.oncomplete = () => resolve(result);
-    t.onerror = () => reject(t.error);
-    t.onabort = () => reject(t.error);
+    let failed = false;
+    const fail = (e) => {
+      if (failed) return;
+      failed = true;
+      try { t.abort(); } catch { /* already finished */ }
+      reject(e);
+    };
+    t.oncomplete = () => { if (!failed) resolve(result); };
+    t.onerror = () => fail(t.error);
+    t.onabort = () => fail(t.error ?? new Error('Transaction aborted'));
+    try {
+      Promise.resolve(fn(stores)).then((r) => { result = r; }, fail);
+    } catch (e) {
+      fail(e);
+    }
   });
 }
 
-const reqP = (r) => new Promise((res, rej) => { r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error); });
+const one = (store, mode, fn) => transact(store, mode, (s) => fn(s[store]));
 
-export const getAll = (store) => tx(store, 'readonly', (os) => reqP(os.getAll()));
-export const get = (store, id) => tx(store, 'readonly', (os) => reqP(os.get(id)));
-export const put = (store, rec) => tx(store, 'readwrite', (os) => reqP(os.put(rec)).then(() => rec));
-export const remove = (store, id) => tx(store, 'readwrite', (os) => reqP(os.delete(id)));
-export const bulkPut = (store, recs) => tx(store, 'readwrite', (os) => { for (const r of recs) os.put(r); });
+export const getAll = (store) => one(store, 'readonly', (os) => reqP(os.getAll()));
+export const get = (store, id) => one(store, 'readonly', (os) => reqP(os.get(id)));
+export const put = (store, rec) => one(store, 'readwrite', (os) => reqP(os.put(rec)).then(() => rec));
+export const remove = (store, id) => one(store, 'readwrite', (os) => reqP(os.delete(id)));
+export const bulkPut = (store, recs) => one(store, 'readwrite', (os) => { for (const r of recs) os.put(r); });
 export const getSingleton = (store, key) => get(store, key);
 export const putSingleton = (store, rec) => put(store, rec);
-export const clearAll = () => Promise.all(Object.keys(KEYED).map((s) => tx(s, 'readwrite', (os) => reqP(os.clear()))));
+export const clearAll = () => transact(STORES, 'readwrite', (s) => { for (const n of STORES) s[n].clear(); });
+
+export async function getMeta() {
+  const m = await get('meta', 'schema');
+  return m?.version ?? null;
+}
+
+export async function getSettings() {
+  return { ...defaultSettings(), ...((await get('settings', 'app')) ?? {}), key: 'app' };
+}
+
+export function readAll() {
+  return transact(STORES, 'readonly', (s) => Promise.all([
+    reqP(s.exercises.getAll()), reqP(s.routines.getAll()), reqP(s.sessions.getAll()),
+    reqP(s.bodyweight.getAll()), reqP(s.settings.get('app')),
+  ]).then(([exercises, routines, sessions, bodyweight, settings]) => ({
+    settings: settings ?? null, exercises, routines, sessions, bodyweight,
+  })));
+}
+
+// Replaces every data store and the settings singleton, and stamps meta.schema, in one
+// transaction. A failure part-way leaves the database exactly as it was (spec §5.2, §7.11).
+export function writeAll(state, schemaVersion) {
+  return transact(STORES, 'readwrite', (s) => {
+    for (const name of DATA_STORES) {
+      s[name].clear();
+      for (const rec of state[name] ?? []) s[name].put(rec);
+    }
+    s.settings.put({ ...defaultSettings(), ...(state.settings ?? {}), key: 'app' });
+    s.meta.put({ key: 'schema', version: schemaVersion });
+  });
+}
 
 export async function exportState() {
-  const [exercises, routines, sessions, settings] = await Promise.all([
-    getAll('exercises'), getAll('routines'), getAll('sessions'), getSingleton('settings', 'app'),
-  ]);
-  return { settings: settings ?? { key: 'app', units: 'lb' }, exercises, routines, sessions };
+  const { settings, exercises, routines, sessions, bodyweight } = await readAll();
+  return { settings: { ...defaultSettings(), ...(settings ?? {}), key: 'app' }, exercises, routines, sessions, bodyweight };
 }
 
 export async function importState(state, mode) {
   const current = await exportState();
-  const finalState = applyRestore(current, state, mode);
-  await clearAll();
-  const settings = finalState.settings
-    ? { units: 'lb', ...finalState.settings, key: 'app' }
-    : { key: 'app', units: 'lb' };
-  await putSingleton('settings', settings);
-  await bulkPut('exercises', finalState.exercises ?? []);
-  await bulkPut('routines', finalState.routines ?? []);
-  await bulkPut('sessions', finalState.sessions ?? []);
+  await writeAll(applyRestore(current, state, mode), SCHEMA_VERSION);
 }
