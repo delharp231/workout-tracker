@@ -16,12 +16,27 @@ registerScreen('backup', renderBackup);
 
 const titles = { log: 'Log', routines: 'Routines', library: 'Library', history: 'History', backup: 'Backup' };
 
-export function showScreen(name) {
+let screenCleanup = null;
+let screenToken = 0;
+
+// Switches the main view. A renderer is called as (root, arg) and may return (or resolve to) a
+// cleanup function; it runs before the next screen renders, so timers and the wake lock never
+// outlive their screen. The token drops a cleanup that resolves after the user already moved on.
+export function showScreen(name, arg) {
+  if (screenCleanup) {
+    try { screenCleanup(); } catch (e) { console.warn('Screen cleanup failed:', e); }
+    screenCleanup = null;
+  }
+  const token = ++screenToken;
   const root = document.getElementById('screen');
   while (root.firstChild) root.removeChild(root.firstChild);
   document.getElementById('screen-title').textContent = titles[name] ?? name;
   document.querySelectorAll('.tabbar button').forEach((b) => b.setAttribute('aria-current', String(b.dataset.screen === name)));
-  (screens[name] ?? screens.log)(root);
+  Promise.resolve((screens[name] ?? screens.log)(root, arg)).then((fn) => {
+    if (typeof fn !== 'function') return;
+    if (token === screenToken) screenCleanup = fn;
+    else fn();
+  });
 }
 
 const norm = (s) => String(s ?? '').trim().toLowerCase();
