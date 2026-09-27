@@ -1,4 +1,4 @@
-const CACHE = 'wt-v3';
+const CACHE = 'wt-v4';
 const SHELL = [
   './', './index.html', './css/app.css', './manifest.webmanifest',
   './js/app.js', './js/ui.js', './js/storage.js', './js/schema.js',
