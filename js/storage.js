@@ -25,7 +25,9 @@ export function openDb() {
       db.onversionchange = () => { db.close(); dbPromise = null; };
       resolve(db);
     };
-    req.onerror = () => reject(req.error);
+    req.onerror = () => { dbPromise = null; reject(req.error); };
+    // Another tab (e.g. an old v1 page) still has the database open, so the upgrade can't proceed.
+    req.onblocked = () => { dbPromise = null; reject(new Error('Another copy of the app is still open. Close other tabs or windows of this app, then tap Reload.')); };
   });
   return dbPromise;
 }
@@ -50,7 +52,7 @@ export async function transact(storeNames, mode, fn) {
       reject(e);
     };
     t.oncomplete = () => { if (!failed) resolve(result); };
-    t.onerror = () => fail(t.error);
+    t.onerror = (ev) => fail(t.error ?? ev.target?.error ?? new Error('Storage error'));
     t.onabort = () => fail(t.error ?? new Error('Transaction aborted'));
     try {
       Promise.resolve(fn(stores)).then((r) => { result = r; }, fail);
