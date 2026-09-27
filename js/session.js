@@ -119,8 +119,15 @@ async function enterWorkout(root, session, view) {
     exIndex: new Map(exercises.map((e) => [e.id, e])),
     history: sessions.filter((s) => s.id !== session.id),
     alive: true, view: null, fs: {}, menuOpen: false, useLastSetTime: undefined,
+    saveFailed: false, busy: false,
     // The single persistence chokepoint: every change to the workout is saved through here.
-    save: () => put('sessions', session).catch(() => showSaveError(root)),
+    // Resolves true/false (never rejects) so callers can gate success-only feedback (vibration)
+    // and know whether to keep the save-error banner up.
+    save: () => put('sessions', session).then(
+      () => { ctx.saveFailed = false; root.querySelector('.save-error')?.remove(); return true; },
+      () => { ctx.saveFailed = true; showSaveError(root); return false; }),
+    // Re-shows the banner after a re-render clears it, as long as the last save is still failed.
+    paintSaveError: () => { if (ctx.saveFailed) showSaveError(root); },
     go: (v) => { if (!ctx.alive) return; ctx.view = v; VIEWS[v](ctx); },
     tick: () => tickClock(session),
   };
@@ -184,6 +191,7 @@ function renderOverview(ctx) {
     el('button', { class: 'primary btn-block', text: 'Finish workout', onclick: () => { ctx.useLastSetTime = undefined; ctx.go('finish'); } }),
   );
   ctx.tick();
+  ctx.paintSaveError();
 }
 
 // ---------- finish and discard (spec §7.4) ----------
@@ -202,6 +210,7 @@ function renderFinish(ctx) {
         el('button', { class: 'grow', text: 'Discard workout', onclick: () => discardWorkout(ctx) }),
       ]),
     );
+    ctx.paintSaveError();
     return;
   }
   const stale = sum.staleSec !== null && sum.staleSec > STALE_SEC;
@@ -228,6 +237,7 @@ function renderFinish(ctx) {
     el('button', { class: 'primary grow', text: 'Finish', onclick: () => finishWorkout(ctx, useLast) }),
     el('button', { class: 'grow', text: 'Keep going', onclick: () => ctx.go('overview') }),
   ]));
+  ctx.paintSaveError();
 }
 
 async function finishWorkout(ctx, useLastSetTime) {
@@ -235,6 +245,7 @@ async function finishWorkout(ctx, useLastSetTime) {
   try {
     await put('sessions', done);
   } catch {
+    ctx.saveFailed = true;
     showSaveError(ctx.root);
     return;
   }

@@ -23,6 +23,7 @@ export function renderFocus(ctx) {
   if (entry.type === 'cardio') renderCardio(ctx, entry, i);
   else renderStrength(ctx, entry, i, ex);
   ctx.tick();
+  ctx.paintSaveError();
 }
 
 function moveTo(ctx, index) {
@@ -180,20 +181,32 @@ function readDraft(ctx) {
 }
 
 async function logSet(ctx, entry) {
-  const v = readDraft(ctx);
-  if (!v) return;
-  entry.sets.push(newSet({ ...v, loggedAt: new Date().toISOString() }));
-  await ctx.save();
-  navigator.vibrate?.(30);
-  resetDraft(ctx);
+  if (ctx.busy) return;
+  ctx.busy = true;
+  try {
+    const v = readDraft(ctx);
+    if (!v) return;
+    entry.sets.push(newSet({ ...v, loggedAt: new Date().toISOString() }));
+    const ok = await ctx.save();
+    if (ok) navigator.vibrate?.(30);
+    resetDraft(ctx);
+  } finally {
+    ctx.busy = false;
+  }
 }
 
 async function saveEdit(ctx, entry, k) {
-  const v = readDraft(ctx);
-  if (!v) return;
-  entry.sets[k] = { ...entry.sets[k], ...v };
-  await ctx.save();
-  resetDraft(ctx);
+  if (ctx.busy) return;
+  ctx.busy = true;
+  try {
+    const v = readDraft(ctx);
+    if (!v) return;
+    entry.sets[k] = { ...entry.sets[k], ...v };
+    await ctx.save();
+    resetDraft(ctx);
+  } finally {
+    ctx.busy = false;
+  }
 }
 
 async function deleteSet(ctx, entry, k) {
@@ -287,7 +300,7 @@ function renderCardio(ctx, entry, i) {
   if (!entry.done) {
     root.append(el('button', {
       class: 'primary btn-block', text: 'Mark done',
-      onclick: async () => { entry.done = true; await ctx.save(); navigator.vibrate?.(30); renderFocus(ctx); },
+      onclick: async () => { entry.done = true; const ok = await ctx.save(); if (ok) navigator.vibrate?.(30); renderFocus(ctx); },
     }));
   } else {
     root.append(nextButton(ctx, i), el('button', {
