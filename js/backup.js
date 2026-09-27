@@ -83,6 +83,8 @@ function exportCard(root) {
 // ---------- Import ----------
 
 // Seeds for migrating an old v1 backup exactly like an on-device upgrade (spec §5.3).
+// null means the seeds couldn't be fetched — the caller must not silently do a partial
+// migration (no starter refresh, no legacy hide) and report it as an unqualified success.
 async function migrateOpts() {
   try {
     const [ex, rt] = await Promise.all([
@@ -91,7 +93,7 @@ async function migrateOpts() {
     ]);
     return { seedRoutines: rt.routines, seedExerciseNames: ex.exercises.map((e) => e.name) };
   } catch {
-    return {};
+    return null;
   }
 }
 
@@ -99,7 +101,15 @@ async function importJson(root) {
   const picked = await pickFile('application/json');
   if (!picked) return;
 
-  const backupResult = parseBackup(picked.text, await migrateOpts());
+  const opts = await migrateOpts();
+  let declared = null;
+  try { declared = JSON.parse(picked.text)?.schemaVersion ?? null; } catch { /* parseBackup reports bad JSON */ }
+  if (opts === null && typeof declared === 'number' && declared < 2) {
+    showNotice(root, "Couldn't load the starter data needed to upgrade this older backup. Check your connection and try again — nothing was changed.");
+    return;
+  }
+
+  const backupResult = parseBackup(picked.text, opts ?? {});
   if (backupResult.ok) {
     await importBackupFlow(root, picked.name, backupResult.data);
     return;
@@ -140,7 +150,14 @@ function chooseImportMode(root, filename) {
 async function importBackupFlow(root, filename, data) {
   const mode = await chooseImportMode(root, filename);
   if (!mode) { await refresh(root); return; }
-  await importState(data, mode);
+  try {
+    await importState(data, mode);
+  } catch (e) {
+    // writeAll is atomic: a failure here changes nothing.
+    await refresh(root);
+    showNotice(root, `Restore failed — nothing was changed: ${(e && e.message) || e}`);
+    return;
+  }
   await refresh(root);
   showNotice(root, `Restored "${filename}" (${mode} mode).`);
 }
@@ -195,10 +212,15 @@ function openErasePanel(root) {
       error.textContent = 'Type ERASE (all caps) to confirm.';
       return;
     }
-    await clearAll();
-    for (const k of [ACTIVE_SESSION, LAST_BACKUP, LEGACY_STARTER_SEEDED]) localStorage.removeItem(k);
-    // With meta cleared, the next launch is a fresh install: starter library and routines re-seed.
-    location.reload();
+    try {
+      await clearAll();
+      for (const k of [ACTIVE_SESSION, LAST_BACKUP, LEGACY_STARTER_SEEDED]) localStorage.removeItem(k);
+      // With meta cleared, the next launch is a fresh install: starter library and routines re-seed.
+      location.reload();
+    } catch (e) {
+      // clearAll is one transaction: a failure here changes nothing.
+      error.textContent = `Erase failed — nothing was deleted: ${(e && e.message) || e}`;
+    }
   };
 
   root.append(
