@@ -136,7 +136,7 @@ function chooseImportMode(root, filename) {
       el('div', { class: 'card stack' }, [
         el('div', { text: filename }),
         el('p', { class: 'muted', text: 'Replace erases everything on this device and loads the backup exactly as exported.' }),
-        el('p', { class: 'muted', text: "Merge keeps what's already here and adds anything new from the backup (existing data wins on a conflict)." }),
+        el('p', { class: 'muted', text: "Merge keeps what's already here and adds anything new from the backup (existing data wins on a conflict). On a new or freshly erased phone, choose Replace." }),
         el('div', { class: 'row' }, [
           el('button', { class: 'primary', text: 'Replace all data', onclick: () => resolve('replace') }),
           el('button', { text: 'Merge', onclick: () => resolve('merge') }),
