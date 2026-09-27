@@ -71,7 +71,9 @@ Some updates change how data is stored (Phase 3 moves from schema v1 to v2).
 The app upgrades your data automatically in a single step: either the whole
 upgrade succeeds or nothing is changed, and if it ever fails you get a screen
 with a **Download backup** button. Still, **download a JSON backup from the
-Backup tab before opening a new version** — it's your only copy.
+Backup tab before the new version is deployed** — it's your only copy.
+
+Once a phone has run a version that upgrades the data, don't roll the site back to an older build: the older code can't open the upgraded database and shows a blank screen. Fix forward instead — your data stays intact.
 
 For development, `tests/fixtures/load-v1-db.js` recreates a v1 database in the
 local preview (synthetic, or from a real v1 backup saved as

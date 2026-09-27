@@ -80,7 +80,8 @@ A deploy is allowed only when the automated tests pass and every box below is ch
 **Must be tested on the real Pixel, over the deployed HTTPS site. A service worker won't register in the preview.**
 
 - [ ] **Before deploying:** `.vercelignore` exists and excludes `tests/` and `.superpowers/` (so dev fixtures and real backups are never uploaded).
-- [ ] **Before installing an update that migrates data: download a JSON backup on the phone.**
+- [ ] **Before running `vercel --prod`:** open the current app on the phone and tap Backup → Download JSON backup. (A recent "Last backup" date isn't proof — the old version also counted CSV exports.)
+- [ ] **Never roll back past Phase 3.** Once the phone has opened Phase 3, its database is at version 2 and older builds can't open it (blank app). If something breaks, fix forward.
 - [ ] ⋮ → Install app / Add to Home screen works; the app opens standalone.
 - [ ] After a deploy, reopen the app once or twice; `caches.keys()` shows only the new cache name.
 - [ ] **Offline gate:** airplane mode → open the app → start a workout, log a set, finish. Everything works.

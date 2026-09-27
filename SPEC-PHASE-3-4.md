@@ -237,7 +237,7 @@ Fresh installs seed these with `origin` and `position` 0, 1, 2. Existing install
 
 Top to bottom:
 
-1. **Backup nudge.** Shown only if at least one finished session exists and the last *JSON backup* was more than 7 days ago, or never: "Last backup 12 days ago · Back up ›". Tapping it opens Backup.
+1. **Backup nudge.** Shown only if at least one workout exists and the last *JSON backup* was more than 7 days ago, or never: "Last backup 12 days ago · Back up ›". Tapping it opens Backup.
 2. **Up next card.** "Up next · Legs (Cycle 1) · 6 exercises" with a large primary **Start** button.
    - **Rotation rule:** find the most recent session whose `routineId` still exists. Up next is the routine with the next `position` after it, wrapping round.
    - With no routine session yet, Up next is the routine with the lowest `position`.
