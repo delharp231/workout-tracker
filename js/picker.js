@@ -8,6 +8,8 @@ import { filterExercises, groupByMuscle, groupsPresent, nameExists } from './cat
 // same type). The search box is not auto-focused, so the phone keyboard stays down on arrival.
 export function openPicker(root, { title = 'Add exercise', type = null, exercises, onPick, onCancel }) {
   const state = { q: '', group: null };
+  let picked = false;
+  let addError = null;
   const visible = () => exercises.filter((e) => !e.hidden && (!type || e.type === type));
   const chips = el('div', { class: 'chips', role: 'group', 'aria-label': 'Filter by muscle group' });
   const count = el('p', { class: 'muted small', role: 'status' });
@@ -18,11 +20,20 @@ export function openPicker(root, { title = 'Add exercise', type = null, exercise
   });
 
   async function quickAdd(name) {
+    if (picked) return;
+    picked = true;
     const ex = newExercise({
       name, type: type ?? 'strength', custom: true,
       muscleGroup: state.group && state.group !== 'Other' ? state.group : '',
     });
-    await put('exercises', ex);
+    try {
+      await put('exercises', ex);
+    } catch (e) {
+      picked = false;
+      addError = `Couldn't save the new exercise: ${(e && e.message) || e}`;
+      draw();
+      return;
+    }
     exercises.push(ex);
     onPick(ex);
   }
@@ -42,7 +53,14 @@ export function openPicker(root, { title = 'Add exercise', type = null, exercise
     for (const { group, items } of groupByMuscle(rows)) {
       list.append(el('h3', { class: 'group-head', text: group }));
       for (const ex of items) {
-        list.append(el('button', { class: 'pick-row', onclick: () => onPick(ex) }, [
+        list.append(el('button', {
+          class: 'pick-row',
+          onclick: () => {
+            if (picked) return;
+            picked = true;
+            onPick(ex);
+          },
+        }, [
           el('span', { text: ex.name }),
           el('span', { class: 'muted small', text: ex.equipment || '' }),
         ]));
@@ -57,6 +75,10 @@ export function openPicker(root, { title = 'Add exercise', type = null, exercise
     const q = state.q.trim();
     if (q && !nameExists(exercises, q)) {
       list.append(el('button', { class: 'pick-row add', text: `+ Create "${q}"`, onclick: () => quickAdd(q) }));
+    }
+    if (addError) {
+      list.append(el('p', { class: 'error', role: 'alert', text: addError }));
+      addError = null;
     }
   }
 

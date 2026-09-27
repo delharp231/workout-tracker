@@ -56,21 +56,29 @@ function menu(ctx, i, ex) {
 }
 
 async function removeEntry(ctx, i, ex) {
-  const { session } = ctx;
-  const [removed] = session.entries.splice(i, 1);
-  session.cursor = Math.max(0, Math.min(i, session.entries.length - 1));
-  await ctx.save();
-  ctx.go(session.entries.length ? 'focus' : 'overview');
-  showToast(`Removed ${exerciseLabel(ex)}`, {
-    actionLabel: 'Undo',
-    onAction: async () => {
-      if (!ctx.alive) return;
-      session.entries.splice(i, 0, removed);
-      session.cursor = i;
-      await ctx.save();
-      ctx.go('focus');
-    },
-  });
+  if (ctx.busy) return;
+  ctx.busy = true;
+  try {
+    const { session } = ctx;
+    if (i < 0 || i >= session.entries.length) return;
+    const [removed] = session.entries.splice(i, 1);
+    session.cursor = Math.max(0, Math.min(i, session.entries.length - 1));
+    await ctx.save();
+    ctx.go(session.entries.length ? 'focus' : 'overview');
+    showToast(`Removed ${exerciseLabel(ex)}`, {
+      actionLabel: 'Undo',
+      onAction: async () => {
+        if (!ctx.alive) return;
+        if (!removed) return;
+        session.entries.splice(i, 0, removed);
+        session.cursor = i;
+        await ctx.save();
+        ctx.go('focus');
+      },
+    });
+  } finally {
+    ctx.busy = false;
+  }
 }
 
 // "Next: <exercise> ›", or "Review & finish ›" on the last entry.
@@ -210,18 +218,28 @@ async function saveEdit(ctx, entry, k) {
 }
 
 async function deleteSet(ctx, entry, k) {
-  const [removed] = entry.sets.splice(k, 1);
-  await ctx.save();
-  resetDraft(ctx);
-  showToast(`Set ${k + 1} deleted`, {
-    actionLabel: 'Undo',
-    onAction: async () => {
-      if (!ctx.alive) return;
-      entry.sets.splice(k, 0, removed);
-      await ctx.save();
-      if (ctx.view === 'focus') renderFocus(ctx);
-    },
-  });
+  if (ctx.busy) return;
+  ctx.busy = true;
+  try {
+    if (k < 0 || k >= entry.sets.length) return;
+    const [removed] = entry.sets.splice(k, 1);
+    await ctx.save();
+    resetDraft(ctx);
+    showToast(`Set ${k + 1} deleted`, {
+      actionLabel: 'Undo',
+      onAction: async () => {
+        if (!ctx.alive) return;
+        if (!removed) return;
+        entry.sets.splice(k, 0, removed);
+        if (ctx.fs.entry === entry) Object.assign(ctx.fs, { editIdx: null, draft: null, noteOpen: false, error: null });
+        await ctx.save();
+        if (ctx.view === 'focus') renderFocus(ctx);
+        else if (ctx.view === 'overview') ctx.go('overview');
+      },
+    });
+  } finally {
+    ctx.busy = false;
+  }
 }
 
 // Big −/value/+ control. Tapping the value swaps in a numeric field for typing an exact number.
