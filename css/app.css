@@ -81,4 +81,4 @@ label.row { min-height:44px; }
 
 /* Toast: above the tab bar, one at a time */
 .toast { position:fixed; left:16px; right:16px; bottom:calc(68px + env(safe-area-inset-bottom)); z-index:10; display:flex; align-items:center; justify-content:space-between; gap:12px; background:#223043; border:1px solid var(--control); border-radius:12px; padding:10px 12px; }
-.toast button { min-height:40px; }
+.toast button { min-height:44px; }
