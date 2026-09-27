@@ -198,10 +198,14 @@ export function migrateV1toV2(state, { seedRoutines = null, seedExerciseNames = 
       : {
         ...e,
         target: e.target ?? null,
-        sets: (e.sets || []).map((set) => ({
-          weight: set.weight ?? null, reps: set.reps ?? null, rir: set.rir ?? null,
-          rpe: set.rpe ?? null, note: set.note ?? '', loggedAt: set.loggedAt ?? null,
-        })),
+        // v1's "+ Add set" pushed a blank set and never removed unfilled ones; a set exists
+        // only once it's logged (spec §4), so drop sets with nothing in them at all.
+        sets: (e.sets || [])
+          .map((set) => ({
+            weight: set.weight ?? null, reps: set.reps ?? null, rir: set.rir ?? null,
+            rpe: set.rpe ?? null, note: set.note ?? '', loggedAt: set.loggedAt ?? null,
+          }))
+          .filter((set) => !(set.weight == null && set.reps == null && set.rpe == null && !(set.note && set.note.trim()))),
       })),
   }));
 

@@ -117,6 +117,28 @@ test('migration is idempotent and does not mutate its input', () => {
   assert.deepEqual(migrateV1toV2(once, opts), once);
 });
 
+test('blank v1 sets are dropped; partially filled sets are kept', () => {
+  const state = {
+    ...v1State(),
+    sessions: [
+      { id: 's2', date: '2026-09-19T17:30:00.000Z', name: 'Workout', routineId: null, notes: '', entries: [
+        { exerciseId: 'bench', type: 'strength', sets: [
+          { weight: null, reps: null, rpe: null, restSec: null, note: '' },
+          { weight: 135, reps: null, rpe: null, restSec: null, note: '' },
+        ] },
+        { exerciseId: 'squat', type: 'strength', sets: [
+          { weight: null, reps: null, rpe: null, restSec: null, note: '' },
+          { weight: null, reps: null, rpe: null, restSec: null, note: '   ' },
+        ] },
+      ] },
+    ],
+  };
+  const out = migrateV1toV2(state, opts);
+  const s2 = out.sessions.find((s) => s.id === 's2');
+  assert.deepEqual(s2.entries[0].sets, [{ weight: 135, reps: null, rir: null, rpe: null, note: '', loggedAt: null }]);
+  assert.deepEqual(s2.entries[1].sets, []);
+});
+
 test('migrate chains v1 backups to v2, leaves v2 alone, rejects newer', () => {
   const out = migrate({ schemaVersion: 1, exportedAt: T1, ...v1State() }, opts);
   assert.equal(out.schemaVersion, 2);
