@@ -1,289 +1,310 @@
-import { getAll, get, put, remove } from './storage.js';
-import { newSession, newStrengthEntry, newCardioEntry, newSet } from './schema.js';
-import { el, clear } from './ui.js';
+import { getAll, get, put, remove, getSettings } from './storage.js';
+import { newSession, newStrengthEntry, newCardioEntry, targetFromItem, compareRoutines } from './schema.js';
+import { el, clear, hideToast } from './ui.js';
 import { showScreen } from './app.js';
+import { ACTIVE_SESSION, LAST_BACKUP } from './keys.js';
+import { nextRoutine } from './progression.js';
+import { countLoggedSets, entryProgress, finishSummary, finishedAtFor, applyFinish, STALE_SEC } from './sessionLogic.js';
+import { formatDuration, formatMinutes, formatAgo } from './format.js';
+import { exerciseLabel } from './catalog.js';
+import { openPicker } from './picker.js';
+import { renderFocus } from './focus.js';
+import * as wakeLock from './wakelock.js';
 
-const ACTIVE_KEY = 'activeSessionId';
+const BACKUP_NUDGE_DAYS = 7;
+const VIEWS = { focus: renderFocus, overview: renderOverview, finish: renderFinish, add: renderAdd, swap: renderSwap };
 
+let active = null;      // the live workout context while the Log tab shows a workout
+let clockTimer = null;
+let starting = false;   // ignores a double-tap on Start
+
+// Log tab entry point: the running workout if there is one, else the start screen.
+// Always returns leaveWorkout, so switching tabs stops the clock, the wake lock and any toast.
 export async function renderLog(root) {
-  const activeId = localStorage.getItem(ACTIVE_KEY);
-  if (activeId) {
-    const session = await get('sessions', activeId);
+  const id = localStorage.getItem(ACTIVE_SESSION);
+  if (id) {
+    const session = await get('sessions', id);
     if (session) {
-      await renderActive(root, session);
-      return;
+      await enterWorkout(root, session, 'focus');
+      return leaveWorkout;
     }
-    // Stale pointer (session was discarded/removed, or a backup was restored
-    // over it) — drop it and fall through to the Start view.
-    localStorage.removeItem(ACTIVE_KEY);
+    // Stale pointer (discarded, or a restore replaced it): drop it, show the start screen.
+    localStorage.removeItem(ACTIVE_SESSION);
   }
   await renderStart(root);
+  return leaveWorkout;
 }
 
-// Full-screen reload, matching the Library/Routines "storage changed" pattern.
-// Used at the two view-level transitions (Start -> Active, Active -> Start);
-// in-place field edits never call this (see renderActive).
-async function refresh(root) {
-  clear(root);
-  await renderLog(root);
-}
-
-function field(labelText, id, inputEl) {
-  inputEl.id = id;
-  return el('div', {}, [el('label', { for: id, class: 'muted', text: labelText }), inputEl]);
-}
-
-// Explicit-parse numeric reader: '' -> null, otherwise Number(...) or null if
-// not a number. Deliberately no `||` fallback — that would turn a real 0
-// (weight/reps/rpe entered as 0) into null.
-function numberOrNull(raw) {
-  if (raw === '' || raw === null || raw === undefined) return null;
-  const n = Number(raw);
-  return Number.isNaN(n) ? null : n;
-}
-
-// Accepts "mm:ss", "h:mm:ss", or a bare number of seconds.
-function parseDuration(raw) {
-  const s = String(raw ?? '').trim();
-  if (!s) return null;
-  if (s.includes(':')) {
-    const parts = s.split(':').map((p) => Number(p.trim()));
-    if (parts.length < 2 || parts.length > 3 || parts.some(Number.isNaN)) return null;
-    const [h, m, sec] = parts.length === 3 ? parts : [0, ...parts];
-    return Math.round(h * 3600 + m * 60 + sec);
+// Creates a workout (optionally from a routine), persists it at once, and marks it active.
+// Each entry carries a snapshot of its routine target. Also used by the Routines screen.
+export async function createWorkout(routine) {
+  const exercises = await getAll('exercises');
+  const exIndex = new Map(exercises.map((e) => [e.id, e]));
+  const session = newSession({ name: routine ? routine.name : undefined, routineId: routine ? routine.id : null });
+  for (const item of routine ? routine.items : []) {
+    const ex = exIndex.get(item.exerciseId);
+    session.entries.push(ex && ex.type === 'cardio'
+      ? newCardioEntry(item.exerciseId, targetFromItem(item, 'cardio'))
+      : newStrengthEntry(item.exerciseId, targetFromItem(item)));
   }
-  const n = Number(s);
-  return Number.isNaN(n) ? null : Math.round(n);
+  await put('sessions', session);
+  localStorage.setItem(ACTIVE_SESSION, session.id);
+  return session;
 }
 
-function formatDuration(sec) {
-  if (sec === null || sec === undefined || Number.isNaN(sec)) return '';
-  const total = Math.max(0, Math.round(sec));
-  const m = Math.floor(total / 60);
-  const s = total % 60;
-  return `${m}:${String(s).padStart(2, '0')}`;
-}
-
-// ---------- Start view (no active session) ----------
+// ---------- start screen (spec §7.1) ----------
 
 async function renderStart(root) {
   clear(root);
-  const [routines, exercises] = await Promise.all([getAll('routines'), getAll('exercises')]);
-  routines.sort((a, b) => a.name.localeCompare(b.name));
+  const [routines, sessions] = await Promise.all([getAll('routines'), getAll('sessions')]);
+  routines.sort(compareRoutines);
+  const nudge = backupNudge(sessions);
+  if (nudge) root.append(nudge);
 
-  const picker = el('select', {}, [
-    // `selected` matters: without it the browser pre-selects the first routine, and
-    // picking that routine fires no change event, so it can never be started.
-    el('option', { value: '', text: 'Start from routine…', disabled: true, selected: true }),
-    ...routines.map((r) => el('option', { value: r.id, text: r.name })),
-  ]);
-  picker.addEventListener('change', () => {
-    if (!picker.value) return;
-    const routine = routines.find((r) => r.id === picker.value);
-    startSession(root, routine, exercises);
-  });
-
-  root.append(
-    el('div', { class: 'card' }, [
-      el('button', {
-        class: 'primary', text: 'Start freestyle',
-        onclick: () => startSession(root, null, exercises),
-      }),
-    ]),
-    routines.length
-      ? el('div', { class: 'card' }, [field('Or start from a routine', 'log-start-routine', picker)])
-      : el('p', { class: 'muted', text: 'No routines yet — start freestyle, or build one in Routines.' }),
-  );
+  const next = nextRoutine(routines, sessions);
+  if (next) {
+    const count = next.items.length;
+    root.append(el('div', { class: 'card upnext stack' }, [
+      el('div', { class: 'muted small', text: 'Up next' }),
+      el('h2', { text: next.name }),
+      el('div', { class: 'muted', text: `${count} exercise${count === 1 ? '' : 's'}` }),
+      el('button', { class: 'primary btn-block', text: 'Start', 'aria-label': `Start ${next.name}`, onclick: () => begin(root, next) }),
+    ]));
+    for (const r of routines) {
+      if (r.id !== next.id) root.append(el('button', { class: 'btn-block', text: `Start ${r.name}`, onclick: () => begin(root, r) }));
+    }
+  } else {
+    root.append(el('div', { class: 'card stack' }, [
+      el('p', { class: 'muted', text: 'No routines yet.' }),
+      el('button', { text: 'Build one in Routines ›', onclick: () => showScreen('routines') }),
+    ]));
+  }
+  root.append(el('button', { class: 'btn-block', text: 'Freestyle workout', onclick: () => begin(root, null) }));
 }
 
-// Creates the session, pre-adds one entry per routine item (if any), persists
-// it immediately, and marks it active — per the state-safety rule, a session
-// exists in storage from the moment it's started, not from "Finish".
-async function startSession(root, routine, exercises) {
-  const session = newSession({
-    name: routine ? routine.name : undefined,
-    routineId: routine ? routine.id : null,
-  });
-  if (routine) {
-    for (const item of routine.items) {
-      const ex = exercises.find((e) => e.id === item.exerciseId);
-      session.entries.push(
-        ex && ex.type === 'cardio' ? newCardioEntry(item.exerciseId) : newStrengthEntry(item.exerciseId),
-      );
-    }
-  }
-  await put('sessions', session);
-  localStorage.setItem(ACTIVE_KEY, session.id);
-  await refresh(root);
+function backupNudge(sessions) {
+  if (!sessions.length) return null;
+  const last = localStorage.getItem(LAST_BACKUP);
+  const ageDays = last ? (Date.now() - Date.parse(last)) / 86_400_000 : Infinity;
+  if (ageDays <= BACKUP_NUDGE_DAYS) return null;
+  const label = Number.isFinite(ageDays) ? `Last backup ${Math.floor(ageDays)} days ago` : 'No backup yet';
+  return el('button', { class: 'nudge', text: `${label} · Back up ›`, onclick: () => showScreen('backup') });
 }
 
-// ---------- Active session view ----------
-
-async function renderActive(root, session) {
-  clear(root);
-  const exercises = await getAll('exercises');
-  const exIndex = new Map(exercises.map((e) => [e.id, e]));
-  const pickable = exercises.filter((e) => !e.hidden).sort((a, b) => a.name.localeCompare(b.name));
-
-  // Prominent, persistent warning if a save ever fails (storage quota,
-  // transaction abort) — shown once and left visible; the "persisted
-  // immediately" guarantee must never fail silently.
-  const saveError = el('div', {
-    class: 'save-error',
-    text: "⚠ Couldn't save your last change — check device storage.",
-  });
-  saveError.hidden = true;
-  function showSaveError() { saveError.hidden = false; }
-
-  // The single persistence chokepoint: every mutation below (add entry, add
-  // set, any field edit) calls this — never a direct `put` of its own — so
-  // closing the tab mid-set can't lose anything (no batching, no save-on-finish).
-  const save = () => put('sessions', session).catch(() => showSaveError());
-
-  function exerciseLabel(exerciseId) {
-    const e = exIndex.get(exerciseId);
-    if (!e) return '(removed exercise)';
-    return e.hidden ? `${e.name} (hidden)` : e.name;
+async function begin(root, routine) {
+  if (starting) return;
+  starting = true;
+  try {
+    const session = await createWorkout(routine);
+    await enterWorkout(root, session, session.entries.length ? 'focus' : 'add');
+  } finally {
+    starting = false;
   }
+}
 
-  const entriesList = el('div');
-  const drawEntries = () => {
-    clear(entriesList);
-    session.entries.forEach((entry) => entriesList.append(entryCard(entry)));
-    if (!session.entries.length) {
-      entriesList.append(el('p', { class: 'muted', text: 'No exercises yet — add one below.' }));
-    }
+// ---------- the live workout ----------
+
+function stopEffects() {
+  clearInterval(clockTimer);
+  clockTimer = null;
+  wakeLock.release();
+}
+
+async function enterWorkout(root, session, view) {
+  if (active) active.alive = false;
+  stopEffects();
+  const [exercises, sessions, settings] = await Promise.all([getAll('exercises'), getAll('sessions'), getSettings()]);
+  const ctx = {
+    root, session, exercises, settings,
+    exIndex: new Map(exercises.map((e) => [e.id, e])),
+    history: sessions.filter((s) => s.id !== session.id),
+    alive: true, view: null, fs: {}, menuOpen: false, useLastSetTime: undefined,
+    saveFailed: false, busy: false,
+    // The single persistence chokepoint: every change to the workout is saved through here.
+    // Resolves true/false (never rejects) so callers can gate success-only feedback (vibration)
+    // and know whether to keep the save-error banner up.
+    save: () => put('sessions', session).then(
+      () => { ctx.saveFailed = false; root.querySelector('.save-error')?.remove(); return true; },
+      () => { ctx.saveFailed = true; showSaveError(root); return false; }),
+    // Re-shows the banner after a re-render clears it, as long as the last save is still failed.
+    paintSaveError: () => { if (ctx.saveFailed) showSaveError(root); },
+    go: (v) => { if (!ctx.alive) return; ctx.view = v; VIEWS[v](ctx); },
+    tick: () => tickClock(session),
   };
+  active = ctx;
+  clockTimer = setInterval(() => tickClock(session), 1000);
+  if (settings.keepScreenOn) wakeLock.acquire();
+  ctx.go(view);
+}
 
-  function entryCard(entry) {
-    return entry.type === 'cardio' ? cardioCard(entry) : strengthCard(entry);
-  }
+function leaveWorkout() {
+  if (active) active.alive = false;
+  active = null;
+  stopEffects();
+  hideToast();
+}
 
-  // Each set row closes over the actual `set` object (an element of
-  // entry.sets), never a re-derived `entry.sets[i]` lookup, so a handler
-  // always writes back to the exact set it was built for even if the list
-  // is rebuilt or re-ordered later. Rows are always rebuilt fresh from
-  // entry.sets on every drawSets() call (never patched in place).
-  function strengthCard(entry) {
-    const setsBody = el('div');
-    const drawSets = () => {
-      clear(setsBody);
-      entry.sets.forEach((set, i) => setsBody.append(setRow(set, i)));
-      if (!entry.sets.length) setsBody.append(el('p', { class: 'muted', text: 'No sets yet.' }));
-    };
+function tickClock(session) {
+  const text = formatDuration((Date.now() - Date.parse(session.date)) / 1000);
+  document.querySelectorAll('[data-clock]').forEach((n) => { n.textContent = text; });
+}
 
-    function setRow(set, i) {
-      const weightInput = el('input', {
-        type: 'number', inputmode: 'decimal', step: 'any', placeholder: 'Weight (lb)',
-        value: set.weight ?? '',
-        oninput: (ev) => { set.weight = numberOrNull(ev.target.value); save(); },
-      });
-      const repsInput = el('input', {
-        type: 'number', inputmode: 'numeric', step: '1', placeholder: 'Reps',
-        value: set.reps ?? '',
-        oninput: (ev) => { set.reps = numberOrNull(ev.target.value); save(); },
-      });
-      const rpeInput = el('input', {
-        type: 'number', inputmode: 'decimal', step: 'any', min: '0', max: '10', placeholder: 'RPE',
-        value: set.rpe ?? '',
-        oninput: (ev) => { set.rpe = numberOrNull(ev.target.value); save(); },
-      });
-      const noteInput = el('input', {
-        placeholder: 'Note', value: set.note ?? '',
-        oninput: (ev) => { set.note = ev.target.value; save(); },
-      });
-      return el('div', { class: 'card' }, [
-        el('div', { class: 'row' }, [
-          el('span', { class: 'muted', text: `#${i + 1}` }),
-          weightInput, repsInput, rpeInput,
-        ]),
-        noteInput,
-      ]);
-    }
+function showSaveError(root) {
+  if (root.querySelector('.save-error')) return;
+  root.prepend(el('div', { class: 'save-error', role: 'alert', text: "⚠ Couldn't save your last change — check device storage." }));
+}
 
-    drawSets();
-    return el('div', { class: 'card' }, [
-      el('div', { text: exerciseLabel(entry.exerciseId) }),
-      setsBody,
-      el('button', {
-        text: '+ Add set',
-        onclick: async () => { entry.sets.push(newSet()); await save(); drawSets(); },
-      }),
-    ]);
-  }
+// ---------- overview (spec §7.3) ----------
 
-  // Cardio fields mutate the captured `entry` object directly, same rule as
-  // the strength set rows above.
-  function cardioCard(entry) {
-    const durationInput = el('input', {
-      placeholder: 'Duration (mm:ss or sec)', value: formatDuration(entry.durationSec),
-      oninput: (ev) => { entry.durationSec = parseDuration(ev.target.value); save(); },
-    });
-    const distanceInput = el('input', {
-      type: 'number', inputmode: 'decimal', step: 'any', min: '0', placeholder: 'Distance',
-      value: entry.distance ?? '',
-      oninput: (ev) => { entry.distance = numberOrNull(ev.target.value); save(); },
-    });
-    const unitSelect = el('select', {}, [
-      el('option', { value: 'mi', text: 'mi' }),
-      el('option', { value: 'km', text: 'km' }),
-      el('option', { value: 'm', text: 'm' }),
-    ]);
-    unitSelect.value = entry.distanceUnit ?? 'mi';
-    unitSelect.addEventListener('change', () => { entry.distanceUnit = unitSelect.value; save(); });
-    const noteInput = el('input', {
-      placeholder: 'Note', value: entry.note ?? '',
-      oninput: (ev) => { entry.note = ev.target.value; save(); },
-    });
-    return el('div', { class: 'card' }, [
-      el('div', { text: exerciseLabel(entry.exerciseId) }),
-      el('div', { class: 'row' }, [durationInput, distanceInput, unitSelect]),
-      noteInput,
-    ]);
-  }
-
-  const addExercisePicker = el('select', {}, [
-    el('option', { value: '', text: '+ Add exercise…', disabled: true, selected: true }),
-    ...pickable.map((e) => el('option', { value: e.id, text: e.name })),
-  ]);
-  addExercisePicker.addEventListener('change', async () => {
-    if (!addExercisePicker.value) return;
-    const ex = exIndex.get(addExercisePicker.value);
-    session.entries.push(ex.type === 'cardio' ? newCardioEntry(ex.id) : newStrengthEntry(ex.id));
-    await save();
-    addExercisePicker.value = '';
-    drawEntries();
-  });
-
-  async function finish() {
-    try {
-      await put('sessions', session);
-    } catch {
-      showSaveError();
-      return;
-    }
-    localStorage.removeItem(ACTIVE_KEY);
-    showScreen('history');
-  }
-
-  async function discard() {
-    const setCount = session.entries.reduce((n, e) => n + ((e.sets && e.sets.length) || 0), 0);
-    if (setCount > 0 && !confirm(`Discard this workout? ${setCount} logged set${setCount === 1 ? '' : 's'} will be deleted.`)) return;
-    await remove('sessions', session.id);
-    localStorage.removeItem(ACTIVE_KEY);
-    await refresh(root);
-  }
-
-  root.append(
+function renderOverview(ctx) {
+  const { root, session } = ctx;
+  clear(root);
+  root.append(el('div', { class: 'focus-head' }, [
     el('h2', { text: session.name }),
-    el('div', { class: 'muted', text: new Date(session.date).toLocaleString() }),
-    saveError,
-    entriesList,
-    field('Add exercise', 'log-add-exercise', addExercisePicker),
-    el('div', { class: 'row' }, [
-      el('button', { class: 'primary', text: 'Finish', onclick: finish }),
-      el('button', { text: 'Discard', onclick: discard }),
-    ]),
+    el('span', { class: 'clock muted', 'data-clock': '', 'aria-label': 'Workout time' }),
+    el('button', {
+      class: 'icon-btn', 'aria-label': 'Workout options', 'aria-expanded': String(!!ctx.menuOpen), text: '…',
+      onclick: () => { ctx.menuOpen = !ctx.menuOpen; renderOverview(ctx); },
+    }),
+  ]));
+  if (ctx.menuOpen) {
+    root.append(el('div', { class: 'card menu' }, [
+      el('button', { text: 'Discard workout', onclick: () => discardWorkout(ctx) }),
+      el('button', { text: 'Close', onclick: () => { ctx.menuOpen = false; renderOverview(ctx); } }),
+    ]));
+  }
+  if (session.entries.length) {
+    root.append(el('button', { class: 'link', text: '‹ Back to exercise', onclick: () => ctx.go('focus') }));
+  } else {
+    root.append(el('p', { class: 'muted', text: 'No exercises yet.' }));
+  }
+  root.append(el('div', { class: 'stack' }, session.entries.map((entry, i) => {
+    const p = entryProgress(entry);
+    const name = exerciseLabel(ctx.exIndex.get(entry.exerciseId));
+    return el('button', {
+      class: `list-row${p.done ? ' done' : ''}`, 'aria-label': `${name}, ${p.spoken}`,
+      onclick: () => { session.cursor = i; ctx.save(); ctx.go('focus'); },
+    }, [el('span', { text: name }), el('span', { class: p.done ? 'ok' : 'muted', text: p.label })]);
+  })));
+  root.append(
+    el('button', { text: '+ Add exercise', onclick: () => ctx.go('add') }),
+    el('button', { class: 'primary btn-block', text: 'Finish workout', onclick: () => { ctx.useLastSetTime = undefined; ctx.go('finish'); } }),
   );
-  drawEntries();
+  ctx.tick();
+  ctx.paintSaveError();
+}
+
+// ---------- finish and discard (spec §7.4) ----------
+
+function renderFinish(ctx) {
+  const { root, session } = ctx;
+  clear(root);
+  const nowIso = new Date().toISOString();
+  const sum = finishSummary(session, ctx.exIndex, nowIso);
+  if (sum.nothingLogged) {
+    root.append(
+      el('h2', { text: 'Nothing logged yet' }),
+      el('p', { class: 'muted', text: 'Log a set or mark cardio done first, or discard this workout.' }),
+      el('div', { class: 'row' }, [
+        el('button', { class: 'primary grow', text: 'Keep going', onclick: () => ctx.go('overview') }),
+        el('button', { class: 'grow', text: 'Discard workout', onclick: () => discardWorkout(ctx) }),
+      ]),
+    );
+    ctx.paintSaveError();
+    return;
+  }
+  const stale = sum.staleSec !== null && sum.staleSec > STALE_SEC;
+  if (ctx.useLastSetTime === undefined) ctx.useLastSetTime = stale;
+  const useLast = stale && ctx.useLastSetTime;
+  const finishedAt = finishedAtFor(session, { nowIso, useLastSetTime: useLast });
+  const durationSec = (Date.parse(finishedAt) - Date.parse(session.date)) / 1000;
+  root.append(
+    el('h2', { text: `Finish ${session.name}?` }),
+    el('p', { class: 'summary', text: `${sum.setCount} set${sum.setCount === 1 ? '' : 's'} · ${formatMinutes(durationSec)}` }),
+  );
+  if (sum.removeNames.length) {
+    root.append(el('p', { class: 'muted', text: `Not logged (will be removed): ${sum.removeNames.join(', ')}` }));
+  }
+  if (stale) {
+    const cb = el('input', { type: 'checkbox', id: 'finish-use-last-set' });
+    cb.checked = useLast;
+    cb.addEventListener('change', () => { ctx.useLastSetTime = cb.checked; renderFinish(ctx); });
+    root.append(el('label', { class: 'row', for: 'finish-use-last-set' }, [
+      cb, el('span', { text: `Last set was ${formatAgo(sum.staleSec)} ago. Use that as the finish time?` }),
+    ]));
+  }
+  root.append(el('div', { class: 'row' }, [
+    el('button', { class: 'primary grow', text: 'Finish', onclick: () => finishWorkout(ctx, useLast) }),
+    el('button', { class: 'grow', text: 'Keep going', onclick: () => ctx.go('overview') }),
+  ]));
+  ctx.paintSaveError();
+}
+
+async function finishWorkout(ctx, useLastSetTime) {
+  const done = applyFinish(ctx.session, { nowIso: new Date().toISOString(), useLastSetTime });
+  try {
+    await put('sessions', done);
+  } catch {
+    ctx.saveFailed = true;
+    showSaveError(ctx.root);
+    return;
+  }
+  localStorage.removeItem(ACTIVE_SESSION);
+  showScreen('history', { openId: done.id });
+}
+
+async function discardWorkout(ctx) {
+  const n = countLoggedSets(ctx.session);
+  if (n > 0 && !confirm(`Discard this workout? ${n} logged set${n === 1 ? '' : 's'} will be deleted.`)) return;
+  await remove('sessions', ctx.session.id);
+  localStorage.removeItem(ACTIVE_SESSION);
+  const { root } = ctx;
+  leaveWorkout();
+  await renderStart(root);
+}
+
+// ---------- add and swap (spec §7.2 menu, §7.3) ----------
+
+function renderAdd(ctx) {
+  openPicker(ctx.root, {
+    title: 'Add exercise', exercises: ctx.exercises,
+    onCancel: () => ctx.go('overview'),
+    onPick: async (ex) => {
+      ctx.exIndex.set(ex.id, ex);
+      ctx.session.entries.push(ex.type === 'cardio' ? newCardioEntry(ex.id) : newStrengthEntry(ex.id));
+      ctx.session.cursor = ctx.session.entries.length - 1;
+      await ctx.save();
+      ctx.go('focus');
+    },
+  });
+}
+
+function renderSwap(ctx) {
+  const { session } = ctx;
+  const i = session.cursor;
+  const entry = session.entries[i];
+  openPicker(ctx.root, {
+    title: 'Swap exercise', type: entry.type, exercises: ctx.exercises,
+    onCancel: () => ctx.go('focus'),
+    onPick: async (ex) => {
+      ctx.exIndex.set(ex.id, ex);
+      if (ex.id !== entry.exerciseId) {
+        const n = entry.type === 'strength' ? entry.sets.length : 0;
+        if (n > 0) {
+          const oldName = exerciseLabel(ctx.exIndex.get(entry.exerciseId));
+          if (!confirm(`Keep the ${n} logged set${n === 1 ? '' : 's'} under ${oldName} and continue with ${ex.name}?`)) {
+            ctx.go('focus');
+            return;
+          }
+          session.entries.splice(i + 1, 0, newStrengthEntry(ex.id, entry.target));
+          session.cursor = i + 1;
+        } else {
+          entry.exerciseId = ex.id;
+          ctx.fs = {}; // a different exercise: fresh pre-fill and "Last time"
+        }
+        await ctx.save();
+      }
+      ctx.go('focus');
+    },
+  });
 }

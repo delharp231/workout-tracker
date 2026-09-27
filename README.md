@@ -17,8 +17,10 @@ npm test
 ```
 
 That's `node --test` under the hood — no install step, this repo has zero
-dependencies. It covers the pure logic (schema, CSV export, JSON
-import/restore): 29 tests, all green.
+dependencies. It covers the pure logic: formatting, the exercise catalog,
+progression (last time, pre-fill, Up next), workout finish rules, the schema
+and its v1 → v2 migration, the Cycle 1 seed, CSV/JSON export and import, and a
+guard that every app file is cached for offline use.
 
 ## Previewing it locally
 
@@ -31,6 +33,12 @@ python -m http.server 5055
 then visit `http://localhost:5055`. A service worker needs HTTPS or
 `localhost` to register, so this is enough to test everything except real
 offline behavior — for that, see the Pixel/PWA gates in `GATES.md`.
+
+Note: the app's service worker serves files cache-first, so in a plain local
+server it will keep running old code after you edit files. Either unregister
+it (DevTools → Application → Service workers) and hard-reload after each
+change, or serve the folder with a server that returns 404 for
+`/service-worker.js` and sends `Cache-Control: no-store`.
 
 ## Installing it on the Pixel
 
@@ -56,6 +64,21 @@ Use **Export CSV** separately when you want to review your training in a
 spreadsheet — it's one row per set (or cardio entry), plain and pivotable,
 but it's for reading, not for restoring the app's state. Treat JSON as the
 backup and CSV as the report.
+
+## Updating safely
+
+Some updates change how data is stored (Phase 3 moves from schema v1 to v2).
+The app upgrades your data automatically in a single step: either the whole
+upgrade succeeds or nothing is changed, and if it ever fails you get a screen
+with a **Download backup** button. Still, **download a JSON backup from the
+Backup tab before the new version is deployed** — it's your only copy.
+
+Once a phone has run a version that upgrades the data, don't roll the site back to an older build: the older code can't open the upgraded database and shows a blank screen. Fix forward instead — your data stays intact.
+
+For development, `tests/fixtures/load-v1-db.js` recreates a v1 database in the
+local preview (synthetic, or from a real v1 backup saved as
+`tests/fixtures/real-v1.json`, which git ignores) so the upgrade can be tested
+before it ships. See `GATES.md` → Upgrade.
 
 ## The Phase 2 seam
 

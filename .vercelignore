@@ -1,0 +1,6 @@
+tests/
+.superpowers/
+.claude/
+*.md
+workout-backup-*.json
+workouts-*.csv

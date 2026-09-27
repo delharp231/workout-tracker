@@ -8,6 +8,7 @@ const state = {
   exercises: [{ id: 'e1', name: 'Squat' }],
   routines: [{ id: 'r1', name: 'Legs' }],
   sessions: [{ id: 's1', date: '2026-09-15', name: 'W', entries: [] }],
+  bodyweight: [{ date: '2026-09-25', weightLb: 201.4, loggedAt: '2026-09-25T13:00:00.000Z' }],
 };
 
 test('buildBackup stamps version + timestamp and carries all stores', () => {
@@ -17,6 +18,7 @@ test('buildBackup stamps version + timestamp and carries all stores', () => {
   assert.deepEqual(b.exercises, state.exercises);
   assert.deepEqual(b.routines, state.routines);
   assert.deepEqual(b.sessions, state.sessions);
+  assert.deepEqual(b.bodyweight, state.bodyweight);
   assert.deepEqual(b.settings, state.settings);
 });
 
@@ -24,14 +26,15 @@ test('serializeBackup round-trips through JSON', () => {
   const parsed = JSON.parse(serializeBackup(state));
   assert.equal(parsed.schemaVersion, SCHEMA_VERSION);
   assert.deepEqual(parsed.sessions, state.sessions);
+  assert.deepEqual(parsed.bodyweight, state.bodyweight);
 });
 
 test('buildBackup fills defaults for an empty state', () => {
   const b = buildBackup({});
   assert.equal(b.schemaVersion, SCHEMA_VERSION);
-  assert.ok(!Number.isNaN(Date.parse(b.exportedAt)));
   assert.equal(b.settings, null);
   assert.deepEqual(b.exercises, []);
   assert.deepEqual(b.routines, []);
   assert.deepEqual(b.sessions, []);
+  assert.deepEqual(b.bodyweight, []);
 });

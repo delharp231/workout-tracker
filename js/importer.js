@@ -1,6 +1,8 @@
 import { migrate, SCHEMA_VERSION } from './schema.js';
 
-export function parseBackup(text) {
+// `migrateOpts` ({ seedRoutines, seedExerciseNames }) lets an old v1 backup get the same
+// starter refresh and legacy cleanup as an on-device upgrade (spec §5.3).
+export function parseBackup(text, migrateOpts = {}) {
   let obj;
   try {
     obj = JSON.parse(text);
@@ -11,7 +13,7 @@ export function parseBackup(text) {
     return { ok: false, code: 'VERSION', error: `This backup is from a newer app version (v${obj.schemaVersion}); update the app first.` };
   }
   try {
-    const data = migrate(obj);
+    const data = migrate(obj, migrateOpts);
     for (const k of ['exercises', 'routines', 'sessions']) {
       if (!Array.isArray(data[k])) return { ok: false, error: `Backup is missing a valid "${k}" list` };
     }
@@ -47,10 +49,11 @@ export function mergeExercises(existing, incoming) {
   return { merged, added, skipped };
 }
 
-function unionById(a, b) {
-  const byId = new Map();
-  for (const r of [...a, ...b]) byId.set(r.id, byId.get(r.id) ?? r); // existing wins on id clash
-  return [...byId.values()];
+// Union of two record lists by `key`; on a clash the existing record wins.
+function unionBy(existing, incoming, key) {
+  const out = new Map();
+  for (const r of [...existing, ...incoming]) if (!out.has(r[key])) out.set(r[key], r);
+  return [...out.values()];
 }
 
 export function applyRestore(existing, incoming, mode) {
@@ -60,13 +63,14 @@ export function applyRestore(existing, incoming, mode) {
       exercises: incoming.exercises ?? [],
       routines: incoming.routines ?? [],
       sessions: incoming.sessions ?? [],
+      bodyweight: incoming.bodyweight ?? [],
     };
   }
-  // merge
   return {
     settings: existing.settings,
     exercises: mergeExercises(existing.exercises, incoming.exercises ?? []).merged,
-    routines: unionById(existing.routines, incoming.routines ?? []),
-    sessions: unionById(existing.sessions, incoming.sessions ?? []),
+    routines: unionBy(existing.routines, incoming.routines ?? [], 'id'),
+    sessions: unionBy(existing.sessions, incoming.sessions ?? [], 'id'),
+    bodyweight: unionBy(existing.bodyweight ?? [], incoming.bodyweight ?? [], 'date'),
   };
 }

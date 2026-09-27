@@ -7,3 +7,5 @@ node_modules/
 .superpowers/
 
 .vercel
+
+tests/fixtures/real-*.json
