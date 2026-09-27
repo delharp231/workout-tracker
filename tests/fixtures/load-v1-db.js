@@ -5,11 +5,13 @@
 //   const m = await import('/tests/fixtures/load-v1-db.js');
 //   await m.loadV1Fixture();                                  // synthetic v1 data
 //   // or: await m.loadV1Backup('/tests/fixtures/real-v1.json'); // a real v1 JSON backup (gitignored)
+//   // or: await m.loadV1Fixture({ poisonMeta: true });        // forces the upgrade's final write
+//   //     (meta.put) to fail, to prove the one-transaction rollback
 //   location.reload();
 
-const V1_STORES = { exercises: 'id', routines: 'id', sessions: 'id', settings: 'key', meta: 'key' };
+const V1_STORES = { exercises: 'id', routines: 'id', sessions: 'id', settings: 'key' };
 
-async function recreateV1(state) {
+async function recreateV1(state, { metaKeyPath = 'key' } = {}) {
   await new Promise((resolve, reject) => {
     const r = indexedDB.deleteDatabase('workout-tracker');
     r.onsuccess = resolve;
@@ -19,6 +21,7 @@ async function recreateV1(state) {
     const r = indexedDB.open('workout-tracker', 1);
     r.onupgradeneeded = () => {
       for (const [store, keyPath] of Object.entries(V1_STORES)) r.result.createObjectStore(store, { keyPath });
+      r.result.createObjectStore('meta', { keyPath: metaKeyPath });
     };
     r.onsuccess = () => resolve(r.result);
     r.onerror = () => reject(r.error);
@@ -83,6 +86,6 @@ export async function buildV1Fixture() {
   return { settings: { key: 'app', units: 'lb' }, exercises, routines, sessions };
 }
 
-export async function loadV1Fixture() {
-  await recreateV1(await buildV1Fixture());
+export async function loadV1Fixture({ poisonMeta = false } = {}) {
+  await recreateV1(await buildV1Fixture(), { metaKeyPath: poisonMeta ? 'id' : 'key' });
 }
