@@ -142,6 +142,29 @@ export function buildStarterRoutines(seed, exercises) {
     .filter(Boolean);
 }
 
+// Starter routines marked "sync" in the seed that a device already running the app has not been
+// offered yet, appended after its existing routines. A device is offered each one once: a routine
+// you delete later does not come back. Pure: returns the routines to add and the updated list of
+// offered ids ("cycle/key").
+export function starterRoutinesToAdd(seed, exercises, existing, offered = []) {
+  const idByName = idsByName(exercises);
+  const have = new Set(existing.filter((r) => r.origin).map((r) => `${r.origin.cycle}/${r.origin.key}`));
+  const done = new Set(offered);
+  let position = existing.reduce((max, r) => (Number.isFinite(r.position) ? Math.max(max, r.position) : max), -1) + 1;
+  const toAdd = [];
+  for (const s of seed.routines || []) {
+    if (!s.sync) continue;
+    const id = `${s.cycle}/${s.key}`;
+    if (have.has(id)) { done.add(id); continue; }
+    if (done.has(id)) continue;
+    const items = seedItemsFor(s, idByName);
+    if (!items.length) continue;
+    toAdd.push(newRoutine({ name: s.name, items, position: position++, origin: { cycle: s.cycle, key: s.key } }));
+    done.add(id);
+  }
+  return { toAdd, offered: [...done] };
+}
+
 // v1 → v2 (spec §5.1). Pure: returns a new state, never mutates `state`. Idempotent.
 // With `seedRoutines`, unedited starter routines (updatedAt === createdAt) get the seed's
 // prescriptions. With `seedExerciseNames`, unused non-custom exercises that aren't in the

@@ -3,7 +3,7 @@ import { buildCsv, serializeBackup } from './exporter.js';
 import { parseBackup, parseExerciseSeed, mergeExercises } from './importer.js';
 import { newExercise } from './schema.js';
 import { el, clear, field, download, pickFile } from './ui.js';
-import { ACTIVE_SESSION, LAST_BACKUP, LEGACY_STARTER_SEEDED } from './keys.js';
+import { ACTIVE_SESSION, LAST_BACKUP, LEGACY_STARTER_SEEDED, STARTER_ROUTINES_OFFERED } from './keys.js';
 
 const today = () => new Date().toISOString().slice(0, 10);
 
@@ -214,7 +214,7 @@ function openErasePanel(root) {
     }
     try {
       await clearAll();
-      for (const k of [ACTIVE_SESSION, LAST_BACKUP, LEGACY_STARTER_SEEDED]) localStorage.removeItem(k);
+      for (const k of [ACTIVE_SESSION, LAST_BACKUP, LEGACY_STARTER_SEEDED, STARTER_ROUTINES_OFFERED]) localStorage.removeItem(k);
       // With meta cleared, the next launch is a fresh install: starter library and routines re-seed.
       location.reload();
     } catch (e) {

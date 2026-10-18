@@ -4,3 +4,5 @@ export const LAST_BACKUP = 'lastExport';
 // v1 only: marked the starter routines as seeded. Retired in v2 (seeding happens on a fresh
 // install); boot and Erase-all remove it.
 export const LEGACY_STARTER_SEEDED = 'starterRoutinesSeeded';
+// Starter routines (seed entries marked "sync") this device has already been offered, as a JSON array of "cycle/key".
+export const STARTER_ROUTINES_OFFERED = 'starterRoutinesOffered';

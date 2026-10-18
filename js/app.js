@@ -1,6 +1,6 @@
 import { openDb, getAll, bulkPut, getMeta, readAll, writeAll } from './storage.js';
-import { SCHEMA_VERSION, newExercise, buildStarterRoutines, migrateV1toV2 } from './schema.js';
-import { LEGACY_STARTER_SEEDED } from './keys.js';
+import { SCHEMA_VERSION, newExercise, buildStarterRoutines, migrateV1toV2, starterRoutinesToAdd } from './schema.js';
+import { LEGACY_STARTER_SEEDED, STARTER_ROUTINES_OFFERED } from './keys.js';
 import { el, clear, download } from './ui.js';
 import { renderLibrary } from './library.js';
 import { renderRoutines } from './routines.js';
@@ -80,6 +80,20 @@ async function syncDefaultExercises() {
   if (toAdd.length) await bulkPut('exercises', toAdd);
 }
 
+// Adds the seed's "sync" routines to a device that has not been offered them yet (a fresh install
+// already has them). Never edits or removes a routine, and never re-adds one you deleted.
+async function syncStarterRoutines() {
+  let offered = [];
+  try { offered = JSON.parse(localStorage.getItem(STARTER_ROUTINES_OFFERED) || '[]'); } catch { /* start over */ }
+  if (!Array.isArray(offered)) offered = [];
+  const [seed, exercises, routines] = await Promise.all([
+    fetchJson('./seed/routines.default.json'), getAll('exercises'), getAll('routines'),
+  ]);
+  const result = starterRoutinesToAdd(seed, exercises, routines, offered);
+  if (result.toAdd.length) await bulkPut('routines', result.toAdd);
+  try { localStorage.setItem(STARTER_ROUTINES_OFFERED, JSON.stringify(result.offered)); } catch { /* ignore */ }
+}
+
 // Blocking screen shown when the upgrade fails. Nothing was written, so a raw download is the
 // user's safety net before anything else is tried.
 export function renderUpgradeFailure(err) {
@@ -121,6 +135,7 @@ async function boot() {
     return;
   }
   try { await syncDefaultExercises(); } catch (e) { console.warn('Exercise sync skipped:', e); }
+  try { await syncStarterRoutines(); } catch (e) { console.warn('Routine sync skipped:', e); }
   document.querySelectorAll('.tabbar button').forEach((b) => b.addEventListener('click', () => showScreen(b.dataset.screen)));
   showScreen('log');
 }

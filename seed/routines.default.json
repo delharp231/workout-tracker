@@ -38,6 +38,32 @@
         { "exercise": "Standing Calf Raise", "sets": 3, "repMin": 12, "repMax": 15, "rirMin": null, "rirMax": null, "note": "" },
         { "exercise": "Stationary Bike", "sets": null, "repMin": null, "repMax": null, "rirMin": null, "rirMax": null, "note": "EASY Zone 2 cool-down, ~6–8 min. Not intervals on leg day." }
       ]
+    },
+    {
+      "key": "full-body-a",
+      "cycle": "newborn",
+      "name": "Full Body A",
+      "sync": true,
+      "items": [
+        { "exercise": "Leg Press", "sets": 3, "repMin": 8, "repMax": 12, "rirMin": 2, "rirMax": 2, "note": "Short day: do items 1 and 2 only. Swap: Goblet Squat." },
+        { "exercise": "Dumbbell Bench Press", "sets": 3, "repMin": 8, "repMax": 12, "rirMin": 2, "rirMax": 2, "note": "" },
+        { "exercise": "Seated Cable Row", "sets": 3, "repMin": 8, "repMax": 12, "rirMin": 2, "rirMax": 2, "note": "" },
+        { "exercise": "Romanian Deadlift", "sets": 3, "repMin": 8, "repMax": 12, "rirMin": 2, "rirMax": 2, "note": "Dumbbells or barbell." },
+        { "exercise": "Plank", "sets": 3, "repMin": 30, "repMax": 45, "rirMin": null, "rirMax": null, "note": "Hold 30 to 45 s. Log the seconds as reps." }
+      ]
+    },
+    {
+      "key": "full-body-b",
+      "cycle": "newborn",
+      "name": "Full Body B",
+      "sync": true,
+      "items": [
+        { "exercise": "Bulgarian Split Squat", "sets": 3, "repMin": 8, "repMax": 12, "rirMin": 2, "rirMax": 2, "note": "Short day: do items 1 and 2 only. Swap: Step-up." },
+        { "exercise": "Dumbbell Shoulder Press", "sets": 3, "repMin": 8, "repMax": 12, "rirMin": 2, "rirMax": 2, "note": "" },
+        { "exercise": "Lat Pulldown", "sets": 3, "repMin": 8, "repMax": 12, "rirMin": 2, "rirMax": 2, "note": "" },
+        { "exercise": "Hip Thrust", "sets": 3, "repMin": 8, "repMax": 12, "rirMin": 2, "rirMax": 2, "note": "Or glute bridge." },
+        { "exercise": "Dead Bug", "sets": 3, "repMin": 8, "repMax": 8, "rirMin": null, "rirMax": null, "note": "8 per side." }
+      ]
     }
   ]
 }

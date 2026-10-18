@@ -247,6 +247,18 @@
       "equipment": "Machine"
     },
     {
+      "name": "Plank",
+      "type": "strength",
+      "muscleGroup": "Core",
+      "equipment": "Bodyweight"
+    },
+    {
+      "name": "Dead Bug",
+      "type": "strength",
+      "muscleGroup": "Core",
+      "equipment": "Bodyweight"
+    },
+    {
       "name": "Stationary Bike",
       "type": "cardio",
       "muscleGroup": "Conditioning",
