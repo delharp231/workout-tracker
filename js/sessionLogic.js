@@ -1,4 +1,6 @@
 import { exerciseLabel } from './catalog.js';
+import { nextRoutine } from './progression.js';
+import { compareRoutines } from './schema.js';
 
 // Pure rules for the workout lifecycle: progress labels, the finish summary, and pruning.
 
@@ -64,4 +66,21 @@ export function applyFinish(session, { nowIso, useLastSetTime = false }) {
     finishedAt: finishedAtFor(session, { nowIso, useLastSetTime }),
     cursor: 0,
   };
+}
+
+// What the home screen shows. An unfinished workout (the one activeId points at) comes first and
+// hides the start buttons, so a second workout can't orphan it. Otherwise the start list puts
+// "Up next" first and keeps the rest in position order. `last` is the latest finished session.
+export function homeModel({ routines, sessions, activeId, nowIso }) {
+  const session = activeId ? sessions.find((s) => s.id === activeId) ?? null : null;
+  const active = session
+    ? { session, setCount: countLoggedSets(session), ageSec: Math.max(0, (Date.parse(nowIso) - Date.parse(session.date)) / 1000) }
+    : null;
+  const next = active ? null : nextRoutine(routines, sessions);
+  const rest = [...routines].sort(compareRoutines).filter((r) => !next || r.id !== next.id);
+  let last = null;
+  for (const s of sessions) {
+    if (s.finishedAt && (!last || s.date > last.date)) last = s;
+  }
+  return { active, next, rest: active ? [] : rest, last: last ? { name: last.name, date: last.date } : null };
 }

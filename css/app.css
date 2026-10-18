@@ -40,8 +40,8 @@ label.row { min-height:44px; }
 .icon-btn { min-width:48px; min-height:48px; padding:8px; font-size:20px; line-height:1; }
 .icon-spacer { display:inline-block; width:48px; flex:none; }
 
-.tabbar { position:fixed; bottom:0; left:0; right:0; z-index:5; display:grid; grid-template-columns:repeat(5,1fr); background:var(--card); border-top:1px solid var(--line); padding-bottom:env(safe-area-inset-bottom); }
-.tabbar button { border:none; border-radius:0; min-height:56px; font-size:13px; color:var(--muted); background:none; }
+.tabbar { position:fixed; bottom:0; left:0; right:0; z-index:5; display:grid; grid-template-columns:repeat(6,1fr); background:var(--card); border-top:1px solid var(--line); padding-bottom:env(safe-area-inset-bottom); }
+.tabbar button { border:none; border-radius:0; min-height:56px; font-size:12px; padding:0 2px; color:var(--muted); background:none; }
 /* Active tab: colour + weight + a top bar, never colour alone (WCAG 1.4.1). */
 .tabbar button[aria-current="true"] { color:var(--accent); font-weight:600; box-shadow:inset 0 3px 0 var(--accent); }
 

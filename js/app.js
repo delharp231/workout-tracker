@@ -5,6 +5,7 @@ import { el, clear, download } from './ui.js';
 import { renderLibrary } from './library.js';
 import { renderRoutines } from './routines.js';
 import { renderLog } from './session.js';
+import { renderHome } from './home.js';
 import { renderHistory } from './history.js';
 import { renderBackup } from './backup.js';
 
@@ -12,11 +13,12 @@ const screens = {};
 export function registerScreen(name, fn) { screens[name] = fn; }
 registerScreen('library', renderLibrary);
 registerScreen('routines', renderRoutines);
+registerScreen('home', renderHome);
 registerScreen('log', renderLog);
 registerScreen('history', renderHistory);
 registerScreen('backup', renderBackup);
 
-const titles = { log: 'Log', routines: 'Routines', library: 'Library', history: 'History', backup: 'Backup' };
+const titles = { home: 'Home', log: 'Log', routines: 'Routines', library: 'Library', history: 'History', backup: 'Backup' };
 
 let screenCleanup = null;
 let screenToken = 0;
@@ -137,6 +139,6 @@ async function boot() {
   try { await syncDefaultExercises(); } catch (e) { console.warn('Exercise sync skipped:', e); }
   try { await syncStarterRoutines(); } catch (e) { console.warn('Routine sync skipped:', e); }
   document.querySelectorAll('.tabbar button').forEach((b) => b.addEventListener('click', () => showScreen(b.dataset.screen)));
-  showScreen('log');
+  showScreen('home');
 }
 boot();

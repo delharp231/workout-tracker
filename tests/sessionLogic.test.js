@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  STALE_SEC, countLoggedSets, entryProgress, lastLoggedAt, finishedAtFor, finishSummary, applyFinish,
+  STALE_SEC, countLoggedSets, entryProgress, lastLoggedAt, finishedAtFor, finishSummary, applyFinish, homeModel,
 } from '../js/sessionLogic.js';
 
 const set = (reps, loggedAt) => ({ weight: 100, reps, rir: null, rpe: null, note: '', loggedAt });
@@ -77,4 +77,40 @@ test('finishedAtFor falls back to now when there are no timed sets', () => {
   const s = session();
   s.entries = [s.entries[2]];
   assert.equal(finishedAtFor(s, { nowIso: '2026-09-25T18:00:00.000Z', useLastSetTime: true }), '2026-09-25T18:00:00.000Z');
+});
+
+const rt = (id, position) => ({ id, name: `Routine ${id}`, position, items: [] });
+const sess = (id, date, routineId, extra = {}) => ({ id, date, name: `Routine ${routineId}`, routineId, finishedAt: null, entries: [], ...extra });
+const NOW = '2026-10-18T12:00:00.000Z';
+
+test('homeModel: an unfinished workout shows as active and hides the start list', () => {
+  const open = sess('open', '2026-10-15T12:00:00.000Z', 'a', { entries: [{ exerciseId: 'bench', type: 'strength', sets: [set(8, '2026-10-15T12:05:00.000Z')] }] });
+  const m = homeModel({ routines: [rt('a', 0), rt('b', 1)], sessions: [open], activeId: 'open', nowIso: NOW });
+  assert.equal(m.active.session.id, 'open');
+  assert.equal(m.active.setCount, 1);
+  assert.equal(m.active.ageSec, 3 * 86400);
+  assert.equal(m.next, null);
+  assert.deepEqual(m.rest, []);
+});
+
+test('homeModel: a stale pointer is ignored', () => {
+  const m = homeModel({ routines: [rt('a', 0)], sessions: [], activeId: 'gone', nowIso: NOW });
+  assert.equal(m.active, null);
+  assert.equal(m.next.id, 'a');
+});
+
+test('homeModel: up next goes first, the rest keep position order', () => {
+  const done = sess('s1', '2026-10-16T12:00:00.000Z', 'b', { finishedAt: '2026-10-16T13:00:00.000Z' });
+  const m = homeModel({ routines: [rt('a', 0), rt('b', 1), rt('c', 2)], sessions: [done], activeId: null, nowIso: NOW });
+  assert.equal(m.next.id, 'c');
+  assert.deepEqual(m.rest.map((r) => r.id), ['a', 'b']);
+});
+
+test('homeModel: last is the latest finished session, never an unfinished one', () => {
+  const old = sess('s1', '2026-10-10T12:00:00.000Z', 'a', { finishedAt: '2026-10-10T13:00:00.000Z' });
+  const recent = sess('s2', '2026-10-14T12:00:00.000Z', 'b', { finishedAt: '2026-10-14T13:00:00.000Z' });
+  const open = sess('s3', '2026-10-17T12:00:00.000Z', 'a');
+  const m = homeModel({ routines: [rt('a', 0)], sessions: [old, recent, open], activeId: null, nowIso: NOW });
+  assert.deepEqual(m.last, { name: 'Routine b', date: '2026-10-14T12:00:00.000Z' });
+  assert.equal(homeModel({ routines: [], sessions: [], activeId: null, nowIso: NOW }).last, null);
 });

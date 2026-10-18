@@ -104,3 +104,12 @@ export function formatAgo(sec) {
   const m = Math.round(sec / 60);
   return m < 60 ? `${m} min` : `${Math.round(m / 60)} h`;
 }
+
+// Seconds → "12 min ago", "5 h ago" or "3 days ago" (for "started … ago" on the home screen).
+export function formatStartedAgo(sec) {
+  const m = Math.max(0, Math.round(sec / 60));
+  if (m < 60) return `${m} min ago`;
+  const h = Math.round(m / 60);
+  if (h < 48) return `${h} h ago`;
+  return `${Math.floor(h / 24)} days ago`;
+}

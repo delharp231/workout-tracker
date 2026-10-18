@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
   numberOrNull, intOrNull, parseDuration, formatDuration, formatRange, formatTarget,
-  formatSets, formatSetLine, formatShortDate, formatMinutes, formatAgo,
+  formatSets, formatSetLine, formatShortDate, formatMinutes, formatAgo, formatStartedAgo,
 } from '../js/format.js';
 
 test('numberOrNull keeps 0 and rejects junk', () => {
@@ -87,4 +87,12 @@ test('formatMinutes and formatAgo', () => {
   assert.equal(formatMinutes(20), '0 min');
   assert.equal(formatAgo(45 * 60), '45 min');
   assert.equal(formatAgo(2 * 3600), '2 h');
+});
+
+test('formatStartedAgo: minutes, hours, then days', () => {
+  assert.equal(formatStartedAgo(5 * 60), '5 min ago');
+  assert.equal(formatStartedAgo(5 * 3600), '5 h ago');
+  assert.equal(formatStartedAgo(47 * 3600), '47 h ago');
+  assert.equal(formatStartedAgo(72 * 3600), '3 days ago');
+  assert.equal(formatStartedAgo(-10), '0 min ago');
 });
