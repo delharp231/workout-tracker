@@ -36,6 +36,11 @@ function routineCard(root, r, exercises, routines) {
       el('button', { text: 'Edit', 'aria-label': `Edit ${r.name}`, onclick: () => openEditor(root, r, exercises, routines) }),
       el('button', { text: 'Delete', 'aria-label': `Delete ${r.name}`, onclick: () => deleteRoutine(root, r) }),
     ]),
+    el('button', {
+      class: 'link', 'aria-pressed': String(r.inRotation !== false),
+      text: r.inRotation !== false ? 'In Up next rotation (tap to leave out)' : 'Left out of Up next (tap to include)',
+      onclick: () => toggleRotation(root, r),
+    }),
   ]);
 }
 
@@ -49,6 +54,14 @@ async function startRoutine(r) {
   }
   await createWorkout(r);
   showScreen('log');
+}
+
+// Flips whether Up next uses this routine. Leaves updatedAt alone: it is not an edit to the routine.
+async function toggleRotation(root, r) {
+  const next = { ...r };
+  if (r.inRotation === false) delete next.inRotation; else next.inRotation = false;
+  await put('routines', next);
+  await refresh(root);
 }
 
 async function deleteRoutine(root, r) {
@@ -119,6 +132,7 @@ function renderEditor(root, ed) {
         items: state.items.map((it) => newRoutineItem(it)),
         position: existing && Number.isFinite(existing.position) ? existing.position : nextPosition(ed.routines),
         origin: existing?.origin ?? null,
+        inRotation: existing?.inRotation,
       });
       if (existing) { r.id = existing.id; r.createdAt = existing.createdAt; }
       await put('routines', r);

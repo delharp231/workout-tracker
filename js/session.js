@@ -4,7 +4,7 @@ import { el, clear, hideToast } from './ui.js';
 import { showScreen } from './app.js';
 import { ACTIVE_SESSION, LAST_BACKUP } from './keys.js';
 import { nextRoutine } from './progression.js';
-import { countLoggedSets, entryProgress, finishSummary, finishedAtFor, applyFinish, STALE_SEC } from './sessionLogic.js';
+import { countLoggedSets, entryProgress, finishSummary, finishedAtFor, applyFinish, originalOf, STALE_SEC } from './sessionLogic.js';
 import { formatDuration, formatMinutes, formatAgo } from './format.js';
 import { exerciseLabel } from './catalog.js';
 import { openPicker } from './picker.js';
@@ -82,7 +82,7 @@ async function renderStart(root) {
   root.append(el('button', { class: 'btn-block', text: 'Freestyle workout', onclick: () => begin(root, null) }));
 }
 
-function backupNudge(sessions) {
+export function backupNudge(sessions) {
   if (!sessions.length) return null;
   const last = localStorage.getItem(LAST_BACKUP);
   const ageDays = last ? (Date.now() - Date.parse(last)) / 86_400_000 : Infinity;
@@ -213,7 +213,7 @@ function renderFinish(ctx) {
     ctx.paintSaveError();
     return;
   }
-  const stale = sum.staleSec !== null && sum.staleSec > STALE_SEC;
+  const stale = sum.staleSec !== null && sum.staleSec > STALE_SEC && !session.reopenedFrom;
   if (ctx.useLastSetTime === undefined) ctx.useLastSetTime = stale;
   const useLast = stale && ctx.useLastSetTime;
   const finishedAt = finishedAtFor(session, { nowIso, useLastSetTime: useLast });
@@ -253,14 +253,28 @@ async function finishWorkout(ctx, useLastSetTime) {
   showScreen('history', { openId: done.id });
 }
 
-async function discardWorkout(ctx) {
-  const n = countLoggedSets(ctx.session);
-  if (n > 0 && !confirm(`Discard this workout? ${n} logged set${n === 1 ? '' : 's'} will be deleted.`)) return;
-  await remove('sessions', ctx.session.id);
+// Discards the active workout after asking. A reopened past workout is put back as it was instead
+// of deleted. Resolves true if it went ahead. Shared with the Home screen.
+export async function discardActive(session) {
+  const original = originalOf(session);
+  if (original) {
+    if (!confirm(`Discard your edits? "${original.name}" goes back to how it was.`)) return false;
+    await put('sessions', original);
+  } else {
+    const n = countLoggedSets(session);
+    if (n > 0 && !confirm(`Discard this workout? ${n} logged set${n === 1 ? '' : 's'} will be deleted.`)) return false;
+    await remove('sessions', session.id);
+  }
   localStorage.removeItem(ACTIVE_SESSION);
+  return true;
+}
+
+async function discardWorkout(ctx) {
+  if (!(await discardActive(ctx.session))) return;
   const { root } = ctx;
   leaveWorkout();
-  await renderStart(root);
+  if (originalOf(ctx.session)) showScreen('history', { openId: ctx.session.id });
+  else await renderStart(root);
 }
 
 // ---------- add and swap (spec §7.2 menu, §7.3) ----------

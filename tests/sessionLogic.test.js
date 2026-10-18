@@ -114,3 +114,36 @@ test('homeModel: last is the latest finished session, never an unfinished one', 
   assert.deepEqual(m.last, { name: 'Routine b', date: '2026-10-14T12:00:00.000Z' });
   assert.equal(homeModel({ routines: [], sessions: [], activeId: null, nowIso: NOW }).last, null);
 });
+
+import { reopenSession, weekCount, weighInSummary } from '../js/sessionLogic.js';
+
+test('reopenSession keeps the original, and finishing restores its finish time and drops the copy', () => {
+  const orig = { ...session(), finishedAt: '2026-09-25T17:40:00.000Z' };
+  const open = reopenSession(orig);
+  assert.equal(open.finishedAt, null);
+  assert.equal(open.reopenedFrom.finishedAt, '2026-09-25T17:40:00.000Z');
+  assert.equal(orig.finishedAt, '2026-09-25T17:40:00.000Z'); // not mutated
+  assert.equal(finishedAtFor(open, { nowIso: '2026-10-18T12:00:00.000Z', useLastSetTime: true }), '2026-09-25T17:40:00.000Z');
+  const done = applyFinish(open, { nowIso: '2026-10-18T12:00:00.000Z' });
+  assert.equal(done.finishedAt, '2026-09-25T17:40:00.000Z');
+  assert.equal('reopenedFrom' in done, false);
+});
+
+test('weekCount counts finished sessions in the local Mon to Sun week', () => {
+  const at = (y, m, d) => new Date(y, m - 1, d, 9).toISOString();
+  const fin = (date) => ({ date, finishedAt: date });
+  const sessions = [fin(at(2026, 10, 12)), fin(at(2026, 10, 14)), fin(at(2026, 10, 18)), fin(at(2026, 10, 11)), fin(at(2026, 10, 19)), { date: at(2026, 10, 15), finishedAt: null }];
+  // Sunday Oct 18 2026: the week is Mon Oct 12 to Sun Oct 18
+  assert.equal(weekCount(sessions, new Date(2026, 9, 18, 20)), 3);
+  assert.equal(weekCount(sessions, new Date(2026, 9, 19, 8)), 1);
+});
+
+test('weighInSummary: latest, 7-day average and the week before', () => {
+  assert.equal(weighInSummary([]), null);
+  const e = (date, weight) => ({ date, weight });
+  const s = weighInSummary([e('2026-10-18', 180), e('2026-10-16', 182), e('2026-10-12', 184), e('2026-10-10', 186), e('2026-10-08', 188)]);
+  assert.equal(s.latest.weight, 180);
+  assert.equal(s.avg7, 182); // Oct 12 to 18: 180, 182, 184
+  assert.equal(s.prevAvg7, 187); // Oct 5 to 11: 186, 188
+  assert.equal(weighInSummary([e('2026-10-18', 180)]).prevAvg7, null);
+});

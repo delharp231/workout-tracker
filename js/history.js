@@ -1,9 +1,11 @@
-import { getAll, remove } from './storage.js';
+import { getAll, get, put, remove } from './storage.js';
 import { el, clear } from './ui.js';
 import { ACTIVE_SESSION } from './keys.js';
 import { formatMinutes, formatShortDate, formatTarget, formatSetLine } from './format.js';
 import { exerciseLabel } from './catalog.js';
-import { countLoggedSets } from './sessionLogic.js';
+import { countLoggedSets, reopenSession } from './sessionLogic.js';
+import { showScreen } from './app.js';
+import { showToast } from './ui.js';
 import { sessionDurationSec } from './exporter.js';
 
 // History tab. `arg.openId` (from Finish) opens that workout's detail directly.
@@ -67,6 +69,17 @@ function renderDetail(root, s, exIndex) {
     await remove('sessions', s.id);
     await refresh(root);
   }
+  // Edit puts the workout back in progress (a copy of the original is kept for Discard), one at a time.
+  async function editSession() {
+    const activeId = localStorage.getItem(ACTIVE_SESSION);
+    if (activeId && await get('sessions', activeId)) {
+      showToast('Finish or discard the current workout first.');
+      return;
+    }
+    await put('sessions', reopenSession(s));
+    localStorage.setItem(ACTIVE_SESSION, s.id);
+    showScreen('log');
+  }
   root.append(
     el('button', { class: 'link', text: '‹ All workouts', onclick: () => refresh(root) }),
     el('h2', { text: s.name }),
@@ -75,7 +88,10 @@ function renderDetail(root, s, exIndex) {
   if (s.notes) root.append(el('p', { text: s.notes }));
   for (const e of entries) root.append(e.type === 'cardio' ? cardioCard(e, exIndex) : strengthCard(e, exIndex));
   if (!entries.length) root.append(el('p', { class: 'muted', text: 'Nothing logged.' }));
-  root.append(el('button', { text: 'Delete workout', onclick: deleteSession }));
+  root.append(
+    el('button', { class: 'primary btn-block', text: 'Edit workout', onclick: editSession }),
+    el('button', { text: 'Delete workout', onclick: deleteSession }),
+  );
 }
 
 function strengthCard(e, exIndex) {

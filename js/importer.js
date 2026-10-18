@@ -56,6 +56,35 @@ function unionBy(existing, incoming, key) {
   return [...out.values()];
 }
 
+const nameKey = (e) => String(e.name || '').trim().toLowerCase();
+const originKey = (r) => (r.origin ? `${r.origin.cycle}/${r.origin.key}` : null);
+
+// A merge onto a phone that already seeded its own starter exercises and routines: the backup's
+// exercises that share a name are skipped, so their ids (and the ids of starter routines the
+// phone already has) must be rewritten inside the incoming routines and sessions. Pure.
+export function remapIncoming(existing, incoming) {
+  const exByName = new Map(existing.exercises.map((e) => [nameKey(e), e.id]));
+  const exMap = new Map();
+  for (const ex of incoming.exercises ?? []) {
+    const have = exByName.get(nameKey(ex));
+    if (have && have !== ex.id) exMap.set(ex.id, have);
+  }
+  const rtByOrigin = new Map(existing.routines.filter(originKey).map((r) => [originKey(r), r.id]));
+  const rtMap = new Map();
+  const routines = [];
+  for (const r of incoming.routines ?? []) {
+    const have = originKey(r) && rtByOrigin.get(originKey(r));
+    if (have && have !== r.id) { rtMap.set(r.id, have); continue; } // the phone already has this starter
+    routines.push({ ...r, items: (r.items ?? []).map((it) => (exMap.has(it.exerciseId) ? { ...it, exerciseId: exMap.get(it.exerciseId) } : it)) });
+  }
+  const sessions = (incoming.sessions ?? []).map((s) => ({
+    ...s,
+    routineId: rtMap.get(s.routineId) ?? s.routineId,
+    entries: (s.entries ?? []).map((e) => (exMap.has(e.exerciseId) ? { ...e, exerciseId: exMap.get(e.exerciseId) } : e)),
+  }));
+  return { ...incoming, routines, sessions };
+}
+
 export function applyRestore(existing, incoming, mode) {
   if (mode === 'replace') {
     return {
@@ -66,11 +95,12 @@ export function applyRestore(existing, incoming, mode) {
       bodyweight: incoming.bodyweight ?? [],
     };
   }
+  const inc = remapIncoming(existing, incoming);
   return {
     settings: existing.settings,
     exercises: mergeExercises(existing.exercises, incoming.exercises ?? []).merged,
-    routines: unionBy(existing.routines, incoming.routines ?? [], 'id'),
-    sessions: unionBy(existing.sessions, incoming.sessions ?? [], 'id'),
-    bodyweight: unionBy(existing.bodyweight ?? [], incoming.bodyweight ?? [], 'date'),
+    routines: unionBy(existing.routines, inc.routines, 'id'),
+    sessions: unionBy(existing.sessions, inc.sessions, 'id'),
+    bodyweight: unionBy(existing.bodyweight ?? [], inc.bodyweight ?? [], 'date'),
   };
 }

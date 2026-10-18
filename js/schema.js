@@ -66,10 +66,12 @@ export function newRoutineItem({ exerciseId, targetSets = null, repMin = null, r
   return { exerciseId, targetSets: toIntOrNull(targetSets), repMin: rMin, repMax: rMax, rirMin: iMin, rirMax: iMax, note: String(note ?? '') };
 }
 
-export function newRoutine({ name, items = [], position = 0, origin = null } = {}) {
+export function newRoutine({ name, items = [], position = 0, origin = null, inRotation = true } = {}) {
   if (!name || !String(name).trim()) throw new Error('Routine name is required');
   const ts = nowIso();
-  return { id: newId(), name: String(name).trim(), position, origin, items, createdAt: ts, updatedAt: ts };
+  const r = { id: newId(), name: String(name).trim(), position, origin, items, createdAt: ts, updatedAt: ts };
+  if (inRotation === false) r.inRotation = false; // absent means in the rotation, so old data needs no migration
+  return r;
 }
 
 // List order and the Up-next rotation: position first, then name. No position sorts last.

@@ -36,11 +36,14 @@ export function prefillSet({ loggedThisSession = [], lastSets = [], target = nul
   return { weight: null, reps: target?.repMin ?? target?.repMax ?? null, rir: targetRir(target) };
 }
 
-// Up next (spec §7.1): the routine after the most recent session whose routine still exists,
-// in position order, wrapping round; with no such session, the first routine.
+// Up next (spec §7.1): the routine after the most recent session whose routine is in the rotation,
+// in position order, wrapping round; with no such session, the first routine in the rotation.
+// A routine with inRotation === false is skipped (it can still be started by hand). If every
+// routine is switched out, all of them count.
 export function nextRoutine(routines, sessions) {
   if (!routines.length) return null;
-  const ordered = [...routines].sort(compareRoutines);
+  const inRotation = routines.filter((r) => r.inRotation !== false);
+  const ordered = [...(inRotation.length ? inRotation : routines)].sort(compareRoutines);
   const indexById = new Map(ordered.map((r, i) => [r.id, i]));
   let recent = null;
   for (const s of sessions) {

@@ -70,3 +70,23 @@ test('nextRoutine: ignores freestyle sessions and deleted routines', () => {
 test('nextRoutine: null with no routines', () => {
   assert.equal(nextRoutine([], []), null);
 });
+
+test('nextRoutine skips routines left out of the rotation', async () => {
+  const { nextRoutine } = await import('../js/progression.js');
+  const rts = [
+    { id: 'push', name: 'Push', position: 0, inRotation: false },
+    { id: 'a', name: 'Full Body A', position: 1 },
+    { id: 'b', name: 'Full Body B', position: 2 },
+  ];
+  assert.equal(nextRoutine(rts, []).id, 'a');
+  assert.equal(nextRoutine(rts, [{ routineId: 'a', date: '2026-10-18T10:00:00.000Z' }]).id, 'b');
+  assert.equal(nextRoutine(rts, [{ routineId: 'b', date: '2026-10-19T10:00:00.000Z' }]).id, 'a');
+  // a session of a left-out routine does not move the rotation
+  assert.equal(nextRoutine(rts, [{ routineId: 'a', date: '2026-10-18T10:00:00.000Z' }, { routineId: 'push', date: '2026-10-19T10:00:00.000Z' }]).id, 'b');
+});
+
+test('nextRoutine falls back to every routine when all are left out', async () => {
+  const { nextRoutine } = await import('../js/progression.js');
+  const rts = [{ id: 'x', name: 'X', position: 0, inRotation: false }, { id: 'y', name: 'Y', position: 1, inRotation: false }];
+  assert.equal(nextRoutine(rts, []).id, 'x');
+});

@@ -1,7 +1,8 @@
 import { openDb, getAll, bulkPut, getMeta, readAll, writeAll } from './storage.js';
 import { SCHEMA_VERSION, newExercise, buildStarterRoutines, migrateV1toV2, starterRoutinesToAdd } from './schema.js';
 import { LEGACY_STARTER_SEEDED, STARTER_ROUTINES_OFFERED } from './keys.js';
-import { el, clear, download } from './ui.js';
+import { el, clear, download, showToast } from './ui.js';
+import { navAction } from './nav.js';
 import { renderLibrary } from './library.js';
 import { renderRoutines } from './routines.js';
 import { renderLog } from './session.js';
@@ -26,7 +27,14 @@ let screenToken = 0;
 // Switches the main view. A renderer is called as (root, arg) and may return (or resolve to) a
 // cleanup function; it runs before the next screen renders, so timers and the wake lock never
 // outlive their screen. The token drops a cleanup that resolves after the user already moved on.
-export function showScreen(name, arg) {
+export function showScreen(name, arg, { pop = false } = {}) {
+  if (!pop) {
+    // Keep the history stack in step with the screen so the back gesture goes Home (see nav.js).
+    const action = navAction(history.state?.depth ?? 0, name);
+    if (action === 'back') { history.back(); return; } // popstate renders Home
+    if (action === 'push') history.pushState({ depth: 1, screen: name }, '');
+    else if (action === 'replace') history.replaceState({ depth: 1, screen: name }, '');
+  }
   if (screenCleanup) {
     try { screenCleanup(); } catch (e) { console.warn('Screen cleanup failed:', e); }
     screenCleanup = null;
@@ -126,7 +134,15 @@ async function downloadRawBackup(root) {
 
 async function boot() {
   // Register first, so a fixed release can still reach a phone that's stuck on the failure screen.
-  if ('serviceWorker' in navigator) navigator.serviceWorker.register('./service-worker.js').catch(() => {});
+  if ('serviceWorker' in navigator) {
+    // A new worker takes over on install (skipWaiting + claim), but this page keeps running the old
+    // files until it reloads. Offer the reload instead of making you open the app twice.
+    const hadController = !!navigator.serviceWorker.controller;
+    navigator.serviceWorker.addEventListener('controllerchange', () => {
+      if (hadController) showToast('Update ready', { actionLabel: 'Reload', onAction: () => location.reload(), ms: 600000 });
+    });
+    navigator.serviceWorker.register('./service-worker.js').catch(() => {});
+  }
   try {
     await openDb();
     await ensureSchema();
@@ -139,6 +155,12 @@ async function boot() {
   try { await syncDefaultExercises(); } catch (e) { console.warn('Exercise sync skipped:', e); }
   try { await syncStarterRoutines(); } catch (e) { console.warn('Routine sync skipped:', e); }
   document.querySelectorAll('.tabbar button').forEach((b) => b.addEventListener('click', () => showScreen(b.dataset.screen)));
-  showScreen('home');
+  history.replaceState({ depth: 0, screen: 'home' }, '');
+  window.addEventListener('popstate', (ev) => {
+    const st = ev.state;
+    if (st && st.depth === 1 && st.screen) showScreen(st.screen, undefined, { pop: true });
+    else showScreen('home', undefined, { pop: true });
+  });
+  showScreen('home', undefined, { pop: true });
 }
 boot();
