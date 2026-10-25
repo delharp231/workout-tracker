@@ -1,10 +1,10 @@
-const CACHE = 'wt-v7';
+const CACHE = 'wt-v8';
 const SHELL = [
   './', './index.html', './css/app.css', './manifest.webmanifest',
   './js/app.js', './js/ui.js', './js/storage.js', './js/schema.js',
   './js/exporter.js', './js/importer.js', './js/library.js', './js/routines.js',
   './js/session.js', './js/home.js', './js/nav.js', './js/history.js', './js/backup.js',
-  './js/format.js', './js/catalog.js', './js/progression.js', './js/sessionLogic.js', './js/keys.js', './js/picker.js', './js/wakelock.js', './js/focus.js',
+  './js/format.js', './js/catalog.js', './js/progression.js', './js/sessionLogic.js', './js/keys.js', './js/picker.js', './js/wakelock.js', './js/focus.js', './js/morningData.js', './js/morningLogic.js', './js/morning.js',
   './seed/exercises.default.json', './seed/routines.default.json',
   './icons/icon-192.png', './icons/icon-512.png', './icons/icon-maskable-512.png',
 ];

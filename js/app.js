@@ -9,6 +9,7 @@ import { renderLog } from './session.js';
 import { renderHome } from './home.js';
 import { renderHistory } from './history.js';
 import { renderBackup } from './backup.js';
+import { renderMorning } from './morning.js';
 
 const screens = {};
 export function registerScreen(name, fn) { screens[name] = fn; }
@@ -18,8 +19,9 @@ registerScreen('home', renderHome);
 registerScreen('log', renderLog);
 registerScreen('history', renderHistory);
 registerScreen('backup', renderBackup);
+registerScreen('morning', renderMorning);
 
-const titles = { home: 'Home', log: 'Log', routines: 'Routines', library: 'Library', history: 'History', backup: 'Backup' };
+const titles = { home: 'Home', log: 'Log', routines: 'Routines', library: 'Library', history: 'History', backup: 'Backup', morning: 'Morning routine' };
 
 let screenCleanup = null;
 let screenToken = 0;

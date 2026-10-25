@@ -5,6 +5,8 @@ import { ACTIVE_SESSION } from './keys.js';
 import { createWorkout, backupNudge, discardActive } from './session.js';
 import { homeModel, weighInSummary } from './sessionLogic.js';
 import { formatStartedAgo, formatShortDate, numberOrNull } from './format.js';
+import { ITEMS as MORNING_ITEMS } from './morningData.js';
+import { loadState as loadMorning, homeSummary as morningSummary } from './morningLogic.js';
 
 let starting = false; // ignores a double-tap on Start
 
@@ -46,7 +48,20 @@ export async function renderHome(root) {
 
   root.append(el('p', { class: 'muted', text: `This week: ${m.week.done} of ${m.week.target} workouts` }));
   root.append(weighInCard(root, bodyweight, settings.units === 'kg' ? 'kg' : 'lb'));
+  root.append(morningCard());
   if (m.last) root.append(el('p', { class: 'muted small', text: `Last workout: ${m.last.name}, ${formatShortDate(m.last.date)}` }));
+}
+
+// Today's morning routine, read from its own storage (it never touches the workout database).
+function morningCard() {
+  const today = localDate();
+  const s = morningSummary(MORNING_ITEMS, loadMorning(localStorage, today), today);
+  return el('div', { class: 'card stack' }, [
+    el('div', { class: 'card-title', text: 'Morning routine' }),
+    el('div', { text: s.line }),
+    el('div', { class: 'muted small', text: s.due ? `${s.week} · monthly check due` : s.week }),
+    el('button', { class: 'btn-block', text: 'Open', 'aria-label': 'Open morning routine', onclick: () => showScreen('morning') }),
+  ]);
 }
 
 async function start(routine) {
