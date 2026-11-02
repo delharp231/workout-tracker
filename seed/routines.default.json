@@ -64,6 +64,22 @@
         { "exercise": "Hip Thrust", "sets": 3, "repMin": 8, "repMax": 12, "rirMin": 2, "rirMax": 2, "note": "Or glute bridge." },
         { "exercise": "Dead Bug", "sets": 3, "repMin": 8, "repMax": 8, "rirMin": null, "rirMax": null, "note": "8 per side." }
       ]
+    },
+    {
+      "key": "full-body-machines",
+      "cycle": "newborn",
+      "name": "Full Body Machines",
+      "sync": true,
+      "items": [
+        { "exercise": "Incline Treadmill Walk", "sets": null, "repMin": null, "repMax": null, "rirMin": null, "rirMax": null, "note": "Do first. 1 mile at 4.0 mph, 5.5% incline, about 15 min." },
+        { "exercise": "Leg Press", "sets": 2, "repMin": 10, "repMax": 10, "rirMin": 1, "rirMax": 3, "note": "Set 1: stop at 10 and guess reps left. Set 2: adjust the weight, stop with about 1 left." },
+        { "exercise": "Machine Chest Press", "sets": 2, "repMin": 10, "repMax": 10, "rirMin": 1, "rirMax": 3, "note": "" },
+        { "exercise": "Seated Cable Row", "sets": 2, "repMin": 10, "repMax": 10, "rirMin": 1, "rirMax": 3, "note": "" },
+        { "exercise": "Machine Shoulder Press", "sets": 2, "repMin": 10, "repMax": 10, "rirMin": 1, "rirMax": 3, "note": "" },
+        { "exercise": "Seated Leg Curl", "sets": 2, "repMin": 10, "repMax": 10, "rirMin": 1, "rirMax": 3, "note": "Swap: Lying Leg Curl." },
+        { "exercise": "Lat Pulldown", "sets": 2, "repMin": 10, "repMax": 10, "rirMin": 1, "rirMax": 3, "note": "" },
+        { "exercise": "Plank", "sets": 2, "repMin": 30, "repMax": 30, "rirMin": null, "rirMax": null, "note": "Hold 30 s. Log the seconds as reps. Then sauna: water first, about 15 min, stand up slowly." }
+      ]
     }
   ]
 }

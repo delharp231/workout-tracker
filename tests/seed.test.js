@@ -22,6 +22,7 @@ test('the starter routines resolve completely: Push, Pull, Legs, Full Body A and
     ['Legs (Cycle 1)', 2, 'cycle-1', 'legs', 6],
     ['Full Body A', 3, 'newborn', 'full-body-a', 5],
     ['Full Body B', 4, 'newborn', 'full-body-b', 5],
+    ['Full Body Machines', 5, 'newborn', 'full-body-machines', 8],
   ]);
 });
 
@@ -56,6 +57,14 @@ test('prescriptions match workout-research/cycle-1.md, plus the newborn full-bod
     'full-body-b|Lat Pulldown|3|8|12|2|2',
     'full-body-b|Hip Thrust|3|8|12|2|2',
     'full-body-b|Dead Bug|3|8|8||',
+    'full-body-machines|Incline Treadmill Walk|||||',
+    'full-body-machines|Leg Press|2|10|10|1|3',
+    'full-body-machines|Machine Chest Press|2|10|10|1|3',
+    'full-body-machines|Seated Cable Row|2|10|10|1|3',
+    'full-body-machines|Machine Shoulder Press|2|10|10|1|3',
+    'full-body-machines|Seated Leg Curl|2|10|10|1|3',
+    'full-body-machines|Lat Pulldown|2|10|10|1|3',
+    'full-body-machines|Plank|2|30|30||',
   ]);
 });
 
@@ -65,11 +74,11 @@ const oldDevice = () => {
   return { ex, routines: buildStarterRoutines({ routines: rtSeed.routines.filter((r) => !r.sync) }, ex) };
 };
 
-test('a device that has only the cycle 1 routines is offered Full Body A and B after them', () => {
+test('a device that has only the cycle 1 routines is offered Full Body A, B and Machines after them', () => {
   const { ex, routines } = oldDevice();
   const { toAdd, offered } = starterRoutinesToAdd(rtSeed, ex, routines, []);
-  assert.deepEqual(toAdd.map((r) => [r.name, r.position, r.items.length]), [['Full Body A', 3, 5], ['Full Body B', 4, 5]]);
-  assert.deepEqual(offered.sort(), ['newborn/full-body-a', 'newborn/full-body-b']);
+  assert.deepEqual(toAdd.map((r) => [r.name, r.position, r.items.length]), [['Full Body A', 3, 5], ['Full Body B', 4, 5], ['Full Body Machines', 5, 8]]);
+  assert.deepEqual(offered.sort(), ['newborn/full-body-a', 'newborn/full-body-b', 'newborn/full-body-machines']);
 });
 
 test('a routine already on the device is not added again', () => {
@@ -77,26 +86,34 @@ test('a routine already on the device is not added again', () => {
   const routines = buildStarterRoutines(rtSeed, ex);
   const { toAdd, offered } = starterRoutinesToAdd(rtSeed, ex, routines, []);
   assert.deepEqual(toAdd, []);
-  assert.deepEqual(offered.sort(), ['newborn/full-body-a', 'newborn/full-body-b']);
+  assert.deepEqual(offered.sort(), ['newborn/full-body-a', 'newborn/full-body-b', 'newborn/full-body-machines']);
 });
 
 test('a routine you deleted after it was offered does not come back', () => {
   const { ex, routines } = oldDevice();
-  const { toAdd } = starterRoutinesToAdd(rtSeed, ex, routines, ['newborn/full-body-a', 'newborn/full-body-b']);
+  const { toAdd } = starterRoutinesToAdd(rtSeed, ex, routines, ['newborn/full-body-a', 'newborn/full-body-b', 'newborn/full-body-machines']);
   assert.deepEqual(toAdd, []);
+});
+
+test('a device that was already offered Full Body A and B gets only Full Body Machines, after its routines', () => {
+  const ex = exercises();
+  const routines = buildStarterRoutines({ routines: rtSeed.routines.filter((r) => r.key !== 'full-body-machines') }, ex);
+  const { toAdd, offered } = starterRoutinesToAdd(rtSeed, ex, routines, ['newborn/full-body-a', 'newborn/full-body-b']);
+  assert.deepEqual(toAdd.map((r) => [r.name, r.position, r.items.length]), [['Full Body Machines', 5, 8]]);
+  assert.deepEqual(offered.sort(), ['newborn/full-body-a', 'newborn/full-body-b', 'newborn/full-body-machines']);
 });
 
 test('only seed routines marked sync are added, and the cycle 1 routines never are', () => {
   const { ex } = oldDevice();
   const { toAdd } = starterRoutinesToAdd(rtSeed, ex, [], []);
-  assert.deepEqual(toAdd.map((r) => r.name), ['Full Body A', 'Full Body B']);
+  assert.deepEqual(toAdd.map((r) => r.name), ['Full Body A', 'Full Body B', 'Full Body Machines']);
 });
 
 test('new routines sort after existing ones even when positions have gaps or are missing', () => {
   const { ex } = oldDevice();
   const mine = [newRoutine({ name: 'Mine', position: 9 }), { ...newRoutine({ name: 'Loose' }), position: undefined }];
   const { toAdd } = starterRoutinesToAdd(rtSeed, ex, mine, []);
-  assert.deepEqual(toAdd.map((r) => r.position), [10, 11]);
+  assert.deepEqual(toAdd.map((r) => r.position), [10, 11, 12]);
 });
 
 test('a seed routine whose exercises are all unknown is skipped and not marked offered', () => {
