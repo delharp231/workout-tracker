@@ -27,6 +27,25 @@ export function download(filename, text, mime = 'text/plain') {
   setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 
+// Hands a file to the phone's share sheet where the browser can share files (one tap sends it
+// to Drive), and downloads it otherwise. Resolves 'shared', 'cancelled', or 'downloaded'. A share
+// that fails for any reason other than the user backing out falls back to the download.
+export async function shareOrDownload(filename, text, mime = 'text/plain', { nav = globalThis.navigator, save = download } = {}) {
+  if (globalThis.File && nav?.canShare && nav?.share) {
+    const file = new File([text], filename, { type: mime });
+    if (nav.canShare({ files: [file] })) {
+      try {
+        await nav.share({ files: [file], title: filename });
+        return 'shared';
+      } catch (e) {
+        if (e?.name === 'AbortError') return 'cancelled';
+      }
+    }
+  }
+  save(filename, text, mime);
+  return 'downloaded';
+}
+
 // Resolves { name, text }, or null if the picker is cancelled.
 export function pickFile(accept = 'application/json') {
   return new Promise((resolve) => {

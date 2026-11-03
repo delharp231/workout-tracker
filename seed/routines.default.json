@@ -64,6 +64,38 @@
         { "exercise": "Hip Thrust", "sets": 3, "repMin": 8, "repMax": 12, "rirMin": 2, "rirMax": 2, "note": "Or glute bridge." },
         { "exercise": "Dead Bug", "sets": 3, "repMin": 8, "repMax": 8, "rirMin": null, "rirMax": null, "note": "8 per side." }
       ]
+    },
+    {
+      "key": "full-body-machines-a",
+      "cycle": "newborn",
+      "name": "Full Body Machines A",
+      "sync": true,
+      "items": [
+        { "exercise": "Incline Treadmill Walk", "sets": null, "repMin": null, "repMax": null, "rirMin": null, "rirMax": null, "note": "Do first. 1 mile at 4.0 mph, 5.5% incline, about 15 min." },
+        { "exercise": "Leg Press", "sets": 3, "repMin": 10, "repMax": 10, "rirMin": 1, "rirMax": 2, "note": "Set 1 finds the weight: stop at 10 and guess reps left. Sets 2 and 3: stop with 1 to 2 left." },
+        { "exercise": "Machine Chest Press", "sets": 3, "repMin": 10, "repMax": 10, "rirMin": 1, "rirMax": 2, "note": "" },
+        { "exercise": "Seated Cable Row", "sets": 3, "repMin": 10, "repMax": 10, "rirMin": 1, "rirMax": 2, "note": "" },
+        { "exercise": "Machine Shoulder Press", "sets": 3, "repMin": 10, "repMax": 10, "rirMin": 1, "rirMax": 2, "note": "Right shoulder: stop at any pain. Swap: Cable Lateral Raise." },
+        { "exercise": "Seated Leg Curl", "sets": 3, "repMin": 10, "repMax": 10, "rirMin": 1, "rirMax": 2, "note": "Keep seated over lying." },
+        { "exercise": "Lat Pulldown", "sets": 3, "repMin": 10, "repMax": 10, "rirMin": 1, "rirMax": 2, "note": "Wide grip." },
+        { "exercise": "Plank", "sets": 3, "repMin": 30, "repMax": 30, "rirMin": null, "rirMax": null, "note": "Hold 30 s. Log the seconds as reps. Then sauna: water first, about 15 min, stand up slowly." }
+      ]
+    },
+    {
+      "key": "full-body-machines-b",
+      "cycle": "newborn",
+      "name": "Full Body Machines B",
+      "sync": true,
+      "items": [
+        { "exercise": "Incline Treadmill Walk", "sets": null, "repMin": null, "repMax": null, "rirMin": null, "rirMax": null, "note": "Do first. 1 mile at 4.0 mph, 5.5% incline, about 15 min." },
+        { "exercise": "Hack Squat", "sets": 3, "repMin": 10, "repMax": 10, "rirMin": 1, "rirMax": 2, "note": "Set 1 finds the weight: stop at 10 and guess reps left. Sets 2 and 3: stop with 1 to 2 left. Swap: Leg Press with feet high." },
+        { "exercise": "Pec Deck Fly", "sets": 3, "repMin": 10, "repMax": 10, "rirMin": 1, "rirMax": 2, "note": "" },
+        { "exercise": "Chest-Supported Row", "sets": 3, "repMin": 10, "repMax": 10, "rirMin": 1, "rirMax": 2, "note": "" },
+        { "exercise": "Cable Lateral Raise", "sets": 3, "repMin": 10, "repMax": 10, "rirMin": 1, "rirMax": 2, "note": "Light, pain-free range. Stop if the right shoulder hurts." },
+        { "exercise": "Hip Thrust", "sets": 3, "repMin": 10, "repMax": 10, "rirMin": 1, "rirMax": 2, "note": "Machine if there is one." },
+        { "exercise": "Lat Pulldown", "sets": 3, "repMin": 10, "repMax": 10, "rirMin": 1, "rirMax": 2, "note": "Neutral close grip." },
+        { "exercise": "Dead Bug", "sets": 3, "repMin": 8, "repMax": 8, "rirMin": null, "rirMax": null, "note": "8 per side. Then sauna: water first, about 15 min, stand up slowly." }
+      ]
     }
   ]
 }

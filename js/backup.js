@@ -2,7 +2,7 @@ import { exportState, importState, getAll, bulkPut, clearAll } from './storage.j
 import { buildCsv, serializeBackup } from './exporter.js';
 import { parseBackup, parseExerciseSeed, mergeExercises } from './importer.js';
 import { newExercise } from './schema.js';
-import { el, clear, field, download, pickFile } from './ui.js';
+import { el, clear, field, download, pickFile, shareOrDownload } from './ui.js';
 import { ACTIVE_SESSION, LAST_BACKUP, LEGACY_STARTER_SEEDED, STARTER_ROUTINES_OFFERED } from './keys.js';
 
 const today = () => new Date().toISOString().slice(0, 10);
@@ -67,15 +67,16 @@ async function exportCsv(root) {
   const state = await exportState();
   const exerciseIndex = Object.fromEntries(state.exercises.map((e) => [e.id, { name: e.name, type: e.type, muscleGroup: e.muscleGroup }]));
   const filename = `workouts-${today()}.csv`;
-  download(filename, buildCsv(state.sessions, exerciseIndex), 'text/csv');
-  showNotice(root, `Exported ${filename}`);
+  const how = await shareOrDownload(filename, buildCsv(state.sessions, exerciseIndex), 'text/csv');
+  if (how === 'cancelled') return;
+  showNotice(root, how === 'shared' ? `Shared ${filename}` : `Exported ${filename}`);
 }
 
 function exportCard(root) {
   return el('div', { class: 'card stack' }, [
     el('div', { class: 'card-title', text: 'Export' }),
     el('button', { class: 'primary', text: 'Download JSON backup', onclick: () => exportJson(root) }),
-    el('button', { text: 'Export CSV (for spreadsheets)', onclick: () => exportCsv(root) }),
+    el('button', { text: 'Export CSV (share to Drive or save)', onclick: () => exportCsv(root) }),
     el('p', { class: 'muted small', text: "JSON is the full backup — keep it somewhere safe. CSV is for reviewing in a spreadsheet; it can't restore anything." }),
   ]);
 }
